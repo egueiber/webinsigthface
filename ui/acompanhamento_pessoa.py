@@ -2,8 +2,7 @@
 """
 Módulo da Tela de Acompanhamento por Pessoa (Frontend)
 
-Esta tela agora é "burra". Ela apenas pede ao 'graph_service'
-para criar o grafo e o exibe.
+
 """
 import tkinter as tk
 from tkinter import ttk 

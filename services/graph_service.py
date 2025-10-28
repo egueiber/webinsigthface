@@ -71,7 +71,7 @@ def criar_figura_grafo(caminho_data, nome_pessoa, data_inicio_str, data_fim_str)
     nx.draw_networkx_labels(G, pos, labels=node_labels, ax=ax, font_size=8)
 
     # 4. Configurar Eixos e Título
-    ax.set_title(f"Caminhamento de {nome_pessoa} ({data_inicio_str} a {data_fim_str})", fontsize=14)
+    ax.set_title(f"Percurso de: {nome_pessoa} ({data_inicio_str} a {data_fim_str})", fontsize=14)
     ax.set_xticks([])
     
     y_andares = sorted(list(set(andar for _, andar in pos.values())))

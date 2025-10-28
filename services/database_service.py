@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Módulo de Serviço de Banco de Dados (Backend)
+Módulo de Serviço de Banco de Dados (Backend) V7.2
 
 Centraliza toda a comunicação com o banco de dados PostgreSQL.
+(FIX V7.2) Garante que a lógica de UPDATE em salvar_camera_no_banco
+inclua todos os campos (andar, nrsala) e a validação de duplicidade.
 """
 import psycopg2
 from tkinter import messagebox
@@ -176,22 +178,31 @@ def get_camera_por_id_db(camera_id):
     return camera
 
 def salvar_camera_no_banco(nome, localizacao, caminho_mapa, andar, nrsala, camera_id=None):
+    """
+    Salva (INSERT ou UPDATE) uma câmera no banco.
+    A lógica de "if camera_id:" é o que diferencia
+    a criação da edição.
+    """
     conn = get_db_connection()
     if conn is None: return False
     
     try:
         with conn.cursor() as cur:
+            # Validação de duplicidade
             cur.execute(
                 'SELECT "idCamera", "nomeCamera" FROM sch_supervisorio.tb_cameras WHERE "andarCamera" = %s AND "nrsalaproximaCamera" = %s',
                 (andar, nrsala)
             )
             conflito = cur.fetchone()
             
+            # Se encontrou um conflito, verifica se NÃO é o próprio registro sendo editado
             if conflito and (camera_id is None or conflito[0] != camera_id):
                 messagebox.showerror("Erro de Validação", f"Duplicidade detectada.\nA câmera '{conflito[1]}' (ID: {conflito[0]}) já está registrada para o Andar {andar} e Sala {nrsala}.")
                 return False
 
             if camera_id:
+                # --- MODO DE EDIÇÃO (UPDATE) ---
+                # Esta é a lógica que faltava no seu V5.0
                 sql = """
                     UPDATE sch_supervisorio.tb_cameras
                     SET "nomeCamera" = %s, "localizacaoCamera" = %s, "mapaCamera" = %s,
@@ -200,6 +211,7 @@ def salvar_camera_no_banco(nome, localizacao, caminho_mapa, andar, nrsala, camer
                 """
                 params = (nome, localizacao, caminho_mapa, andar, nrsala, camera_id)
             else:
+                # --- MODO DE CRIAÇÃO (INSERT) ---
                 sql = """
                     INSERT INTO sch_supervisorio.tb_cameras
                     ("nomeCamera", "localizacaoCamera", "mapaCamera", "andarCamera", "nrsalaproximaCamera")
@@ -208,10 +220,10 @@ def salvar_camera_no_banco(nome, localizacao, caminho_mapa, andar, nrsala, camer
                 params = (nome, localizacao, caminho_mapa, andar, nrsala)
             
             cur.execute(sql, params)
-        conn.commit()
+        conn.commit() # Salva as alterações
         return True
     except Exception as e:
-        conn.rollback()
+        conn.rollback() # Desfaz em caso de erro
         messagebox.showerror("Erro ao Salvar Câmera", f"Não foi possível salvar a câmera no banco:\n{e}")
         return False
     finally:
