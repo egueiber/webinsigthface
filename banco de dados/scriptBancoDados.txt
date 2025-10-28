@@ -1,0 +1,98 @@
+-- Tablespace: tbs_supervisorio
+
+-- DROP TABLESPACE IF EXISTS tbs_supervisorio;
+
+CREATE TABLESPACE tbs_supervisorio
+  OWNER postgres
+  LOCATION E'C:\\Program Files\\PostgreSQL\\18\\data';
+
+ALTER TABLESPACE tbs_supervisorio
+  OWNER TO postgres;
+  
+  
+  -- Table: sch_supervisorio.tb_cameras
+
+-- DROP TABLE IF EXISTS sch_supervisorio.tb_cameras;
+
+CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_cameras
+(
+    "idCamera" bigint NOT NULL DEFAULT nextval('sch_supervisorio."tb_cameras_idCamera_seq"'::regclass),
+    "nomeCamera" character varying(20) COLLATE pg_catalog."default" NOT NULL,
+    "localizacaoCamera" character varying(30) COLLATE pg_catalog."default" NOT NULL,
+    "mapaCamera" character varying(600) COLLATE pg_catalog."default" NOT NULL,
+    "andarCamera" integer,
+    "nrsalaproximaCamera" integer,
+    CONSTRAINT tb_cameras_pkey PRIMARY KEY ("idCamera")
+)
+
+TABLESPACE tbs_supervisorio;
+
+ALTER TABLE IF EXISTS sch_supervisorio.tb_cameras
+    OWNER to postgres;
+	
+-- Table: sch_supervisorio.tb_parametro
+
+-- DROP TABLE IF EXISTS sch_supervisorio.tb_parametro;
+
+CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_parametro
+(
+    "idParametro" bigint NOT NULL DEFAULT nextval('sch_supervisorio."tb_parametro_idParametro_seq"'::regclass),
+    "caminhoFotosClientes" character varying(600) COLLATE pg_catalog."default" DEFAULT 'C:\Program Files\PostgreSQL\18\data\supervisorio\fotos'::character varying,
+    "caminhoMapas" character varying(600) COLLATE pg_catalog."default" DEFAULT 'C:\Program Files\PostgreSQL\18\data\supervisorio\mapas'::character varying,
+    "caminhoVideoAProcessar" character varying(600) COLLATE pg_catalog."default" DEFAULT 'C:\Program Files\PostgreSQL\18\data\supervisorio\VideosAProcessar'::character varying,
+    "caminhoVideoProcessados" character varying(600) COLLATE pg_catalog."default" DEFAULT 'C:\Program Files\PostgreSQL\18\data\supervisorio\VideosProcessados'::character varying,
+    gerarvideomarcacoes boolean DEFAULT false,
+    "caminhoVideoMarcaoes" character varying(600) COLLATE pg_catalog."default" DEFAULT 'C:\Program Files\PostgreSQL\18\data\supervisorio\VideoMarcacoes'::character varying,
+    "intevalorFrames" integer DEFAULT 15,
+    "escalaImagem" integer DEFAULT 1,
+    "modeloDeteccao" character varying(10) COLLATE pg_catalog."default" DEFAULT 'hog'::character varying,
+    "toleranciaReconhecimento" real DEFAULT 0.6,
+    "caminhoVideoMarcoes" character varying(600) COLLATE pg_catalog."default" DEFAULT 'C:\Program Files\PostgreSQL\18\data\supervisorio\VideoMarcacoes'::character varying,
+    CONSTRAINT tb_parametro_pkey PRIMARY KEY ("idParametro")
+)
+
+TABLESPACE tbs_supervisorio;
+
+ALTER TABLE IF EXISTS sch_supervisorio.tb_parametro
+    OWNER to postgres;
+
+
+-- Table: sch_supervisorio.tb_pessoa
+
+-- DROP TABLE IF EXISTS sch_supervisorio.tb_pessoa;
+
+CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_pessoa
+(
+    "idPessoa" bigint NOT NULL DEFAULT nextval('sch_supervisorio."tb_pessoa_idPessoa_seq"'::regclass),
+    "documentoPessoa" character varying(20) COLLATE pg_catalog."default",
+    "tipoPessoa" "char" DEFAULT 'C'::"char",
+    "nomePessoa" character varying(100) COLLATE pg_catalog."default",
+    "fotosPessoa" character varying(600) COLLATE pg_catalog."default",
+    CONSTRAINT tb_pessoa_pkey PRIMARY KEY ("idPessoa")
+)
+
+TABLESPACE tbs_supervisorio;
+
+ALTER TABLE IF EXISTS sch_supervisorio.tb_pessoa
+    OWNER to postgres;
+
+-- Table: sch_supervisorio.tb_videos_processados
+
+-- DROP TABLE IF EXISTS sch_supervisorio.tb_videos_processados;
+
+CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_videos_processados
+(
+    "idVideo" bigint NOT NULL DEFAULT nextval('sch_supervisorio."tb_videos_idVideo_seq"'::regclass),
+    "nomeArquivoVideo" character varying(700) COLLATE pg_catalog."default",
+    datahoraprocessamento timestamp without time zone,
+    "nomeArquivoFoto" character varying(700) COLLATE pg_catalog."default",
+    "tempoMarcacaoSegundos" real,
+    "nomePastaPessoa" character varying COLLATE pg_catalog."default",
+    "nomeCamera" character varying(20) COLLATE pg_catalog."default",
+    CONSTRAINT tb_videos_pkey PRIMARY KEY ("idVideo")
+)
+
+TABLESPACE tbs_supervisorio;
+
+ALTER TABLE IF EXISTS sch_supervisorio.tb_videos_processados
+    OWNER to postgres;	
