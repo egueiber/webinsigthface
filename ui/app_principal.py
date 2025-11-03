@@ -27,6 +27,7 @@ from services.config_service import carregar_parametros_db
 from ui.home_frame import HomeFrame
 from ui.pessoa_frames import ListarPessoasFrame, CadastroFacialFrame
 from ui.camera_frames import ListarCamerasFrame, CadastroCamerasFrame
+from ui.motor_frames import ListarMotoresFrame, CadastroMotorFrame
 from ui.parametros_frame import ParametrosFrame
 from ui.acompanhamento_area import AcompanhamentoAreaFrame
 from ui.acompanhamento_pessoa import AcompanhamentoPessoaFrame
@@ -97,6 +98,7 @@ class AppPrincipal(tk.Tk):
         botoes_menu = [
             ("Pessoas", "ListarPessoasFrame", "pessoa", "Gerenciar cadastro de pessoas"),  
             ("Câmeras", "ListarCamerasFrame", "camera", "Gerenciar cadastro de câmeras"), 
+            ("Motores", "ListarMotoresFrame", "config", "Gerenciar motores de processamento"),
             ("Acompanhar Área", "AcompanhamentoAreaFrame", "area", "Ver mapa de acompanhamento por área"),
             ("Acompanhar Pessoa", "AcompanhamentoPessoaFrame", "grafo", "Ver grafo de caminhamento por pessoa"),
             ("Parâmetros", "ParametrosFrame", "config", "Configurar parâmetros do sistema")          
@@ -121,6 +123,7 @@ class AppPrincipal(tk.Tk):
         for F in (HomeFrame, 
                   ListarPessoasFrame, CadastroFacialFrame, 
                   ListarCamerasFrame, CadastroCamerasFrame, 
+                  ListarMotoresFrame, CadastroMotorFrame,
                   AcompanhamentoAreaFrame, AcompanhamentoPessoaFrame,
                   ParametrosFrame):
             page_name = F.__name__
@@ -170,6 +173,11 @@ class AppPrincipal(tk.Tk):
         frame = self.frames["CadastroCamerasFrame"]
         frame.carregar_dados(camera_id)
         self.show_frame("CadastroCamerasFrame")
+
+    def abrir_edicao_motor(self, motor_id):
+        frame = self.frames["CadastroMotorFrame"]
+        frame.carregar_dados(motor_id)
+        self.show_frame("CadastroMotorFrame")
 
     def on_closing(self):
         print("Fechando aplicação...")

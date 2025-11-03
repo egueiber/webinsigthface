@@ -345,3 +345,99 @@ def get_caminho_pessoa_db(nome_pessoa, data_inicio, data_fim):
     finally:
         conn.close()
     return resultados
+
+# --- Funções de Motor ---
+def listar_motores_db(filtro_nome=""):
+    sql = """
+        SELECT idmotor, nomemotor, numversao, ativo
+        FROM sch_supervisorio.tb_motor
+        WHERE nomemotor ILIKE %s
+        ORDER BY nomemotor
+    """
+    conn = get_db_connection()
+    if conn is None: return []
+    resultados = []
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, (f"%{filtro_nome}%",))
+            resultados = cur.fetchall()
+    except Exception as e:
+        messagebox.showerror("Erro de Consulta", f"Erro ao listar motores:\n{e}")
+    finally:
+        conn.close()
+    return resultados
+
+def get_motor_por_id_db(motor_id):
+    sql = """
+        SELECT nomemotor, numversao, nomefuncaochamada, nomemetodo, nomearquivojsonerno, nomearquivoexterno, ativo
+        FROM sch_supervisorio.tb_motor WHERE idmotor = %s
+    """
+    conn = get_db_connection()
+    if conn is None: return None
+    motor = None
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, (motor_id,))
+            result = cur.fetchone()
+            if result:
+                motor = {
+                    "nomemotor": result[0],
+                    "numversao": result[1],
+                    "nomefuncaochamada": result[2],
+                    "nomemetodo": result[3],
+                    "nomearquivojsonerno": result[4],
+                    "nomearquivoexterno": result[5],
+                    "ativo": result[6]
+                }
+    except Exception as e:
+        messagebox.showerror("Erro de Consulta", f"Erro ao buscar motor ID {motor_id}:\n{e}")
+    finally:
+        conn.close()
+    return motor
+
+def salvar_motor_no_banco(nomemotor, numversao, nomefuncaochamada, nomemetodo, nomearquivojsonerno, nomearquivoexterno, ativo, motor_id=None):
+    conn = get_db_connection()
+    if conn is None: return False
+    
+    try:
+        with conn.cursor() as cur:
+            if motor_id:
+                sql = """
+                    UPDATE sch_supervisorio.tb_motor
+                    SET nomemotor = %s, numversao = %s, nomefuncaochamada = %s, nomemetodo = %s, nomearquivojsonerno = %s, nomearquivoexterno = %s, ativo = %s
+                    WHERE idmotor = %s
+                """
+                params = (nomemotor, numversao, nomefuncaochamada, nomemetodo, nomearquivojsonerno, nomearquivoexterno, ativo, motor_id)
+            else:
+                sql = """
+                    INSERT INTO sch_supervisorio.tb_motor
+                    (nomemotor, numversao, nomefuncaochamada, nomemetodo, nomearquivojsonerno, nomearquivoexterno, ativo)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """
+                params = (nomemotor, numversao, nomefuncaochamada, nomemetodo, nomearquivojsonerno, nomearquivoexterno, ativo)
+            
+            cur.execute(sql, params)
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        messagebox.showerror("Erro ao Salvar Motor", f"Não foi possível salvar o motor no banco:\n{e}")
+        return False
+    finally:
+        conn.close()
+
+def excluir_motor_db(motor_id):
+    conn = get_db_connection()
+    if conn is None: return False
+    sql = 'DELETE FROM sch_supervisorio.tb_motor WHERE idmotor = %s'
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, (motor_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        messagebox.showerror("Erro ao Excluir", f"Não foi possível excluir o motor:\n{e}")
+        return False
+    finally:
+        conn.close()
