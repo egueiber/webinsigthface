@@ -10,7 +10,7 @@ import os
 PADDING_PIXELS = 60 # Aumenta a área de recorte ao redor do rosto (em pixels)
 
 def gerar_aumentos_de_dados(caminho_pasta):
-    print(f"Iniciando aumento de dados para a pasta: {caminho_pasta}")
+    print(f"[TEMP] Iniciando aumento de dados para a pasta: {caminho_pasta}")
     arquivos_originais = [f for f in os.listdir(caminho_pasta) if f.endswith(('.jpg', '.png'))]
     
     for nome_arquivo in arquivos_originais:
@@ -34,4 +34,4 @@ def gerar_aumentos_de_dados(caminho_pasta):
         novo_nome_desfocado = f"{nome_base}_desfocado{extensao}"
         cv2.imwrite(os.path.join(caminho_pasta, novo_nome_desfocado), imagem_desfocada)
         
-    print("Aumento de dados concluído.")
+    print("[TEMP] Aumento de dados concluído.")

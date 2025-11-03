@@ -115,7 +115,7 @@ def excluir_pessoa_db(pessoa_id, pasta_fotos_completa):
         if pasta_fotos_completa and os.path.exists(pasta_fotos_completa):
             try:
                 shutil.rmtree(pasta_fotos_completa)
-                print(f"Pasta de fotos excluída: {pasta_fotos_completa}")
+                print(f"[TEMP] Pasta de fotos excluída: {pasta_fotos_completa}")
             except Exception as e_fs:
                 messagebox.showwarning("Aviso", f"Pessoa excluída do banco, mas falha ao excluir pasta de fotos:\n{e_fs}")
         return True
@@ -240,7 +240,7 @@ def excluir_camera_db(camera_id, caminho_mapa):
         if caminho_mapa and os.path.exists(caminho_mapa):
             try:
                 os.remove(caminho_mapa)
-                print(f"Arquivo de mapa excluído: {caminho_mapa}")
+                print(f"[TEMP] Arquivo de mapa excluído: {caminho_mapa}")
             except Exception as e_fs:
                 messagebox.showwarning("Aviso", f"Câmera excluída do banco, but falha ao excluir arquivo de mapa:\n{e_fs}")
         return True
@@ -349,7 +349,7 @@ def get_caminho_pessoa_db(nome_pessoa, data_inicio, data_fim):
 # --- Funções de Motor ---
 def listar_motores_db(filtro_nome=""):
     sql = """
-        SELECT idmotor, nomemotor, numversao, ativo
+        SELECT idmotor, nomemotor, numversao, ativo, padrao
         FROM sch_supervisorio.tb_motor
         WHERE nomemotor ILIKE %s
         ORDER BY nomemotor
@@ -369,7 +369,7 @@ def listar_motores_db(filtro_nome=""):
 
 def get_motor_por_id_db(motor_id):
     sql = """
-        SELECT nomemotor, numversao, nomefuncaochamada, nomemetodo, nomearquivojsonerno, nomearquivoexterno, ativo
+        SELECT nomemotor, numversao, nomefuncaochamada, nomemetodo, nomearquivojsonerno, nomearquivoexterno, ativo, padrao
         FROM sch_supervisorio.tb_motor WHERE idmotor = %s
     """
     conn = get_db_connection()
@@ -395,26 +395,34 @@ def get_motor_por_id_db(motor_id):
         conn.close()
     return motor
 
-def salvar_motor_no_banco(nomemotor, numversao, nomefuncaochamada, nomemetodo, nomearquivojsonerno, nomearquivoexterno, ativo, motor_id=None):
+def salvar_motor_no_banco(nomemotor, numversao, nomefuncaochamada, nomemetodo, nomearquivojsonerno, nomearquivoexterno, ativo, padrao=False, motor_id=None):
     conn = get_db_connection()
     if conn is None: return False
     
     try:
         with conn.cursor() as cur:
+            # Se este registro estiver sendo marcado como padrão, desmarca todos os outros primeiro
+            if padrao:
+                try:
+                    cur.execute('UPDATE sch_supervisorio.tb_motor SET padrao = FALSE WHERE padrao = TRUE')
+                except Exception:
+                    # continue mesmo se a atualização de padrao falhar; o erro será tratado adiante
+                    pass
+
             if motor_id:
                 sql = """
                     UPDATE sch_supervisorio.tb_motor
-                    SET nomemotor = %s, numversao = %s, nomefuncaochamada = %s, nomemetodo = %s, nomearquivojsonerno = %s, nomearquivoexterno = %s, ativo = %s
+                    SET nomemotor = %s, numversao = %s, nomefuncaochamada = %s, nomemetodo = %s, nomearquivojsonerno = %s, nomearquivoexterno = %s, ativo = %s, padrao = %s
                     WHERE idmotor = %s
                 """
-                params = (nomemotor, numversao, nomefuncaochamada, nomemetodo, nomearquivojsonerno, nomearquivoexterno, ativo, motor_id)
+                params = (nomemotor, numversao, nomefuncaochamada, nomemetodo, nomearquivojsonerno, nomearquivoexterno, ativo, padrao, motor_id)
             else:
                 sql = """
                     INSERT INTO sch_supervisorio.tb_motor
-                    (nomemotor, numversao, nomefuncaochamada, nomemetodo, nomearquivojsonerno, nomearquivoexterno, ativo)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    (nomemotor, numversao, nomefuncaochamada, nomemetodo, nomearquivojsonerno, nomearquivoexterno, ativo, padrao)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """
-                params = (nomemotor, numversao, nomefuncaochamada, nomemetodo, nomearquivojsonerno, nomearquivoexterno, ativo)
+                params = (nomemotor, numversao, nomefuncaochamada, nomemetodo, nomearquivojsonerno, nomearquivoexterno, ativo, padrao)
             
             cur.execute(sql, params)
         conn.commit()

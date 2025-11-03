@@ -35,7 +35,7 @@ def create_table():
         with conn.cursor() as cur:
             cur.execute(create_table_query)
         conn.commit()
-        print("Tabela 'sch_supervisorio.tb_motor' criada com sucesso ou já existente.")
+        print("[TEMP] Tabela 'sch_supervisorio.tb_motor' criada com sucesso ou já existente.")
     except Exception as e:
         print(f"Não foi possível conectar ao PostgreSQL ou criar a tabela: {e}")
 

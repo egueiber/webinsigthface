@@ -5,6 +5,7 @@ Módulo das Telas de Pessoa (Frontend)
 import tkinter as tk
 from tkinter import ttk 
 from tkinter import messagebox
+from ui.widgets import temporary_message
 import cv2
 import face_recognition
 import os
@@ -124,7 +125,7 @@ class ListarPessoasFrame(ttk.Frame):
         success = excluir_pessoa_db(pessoa_id, caminho_completo_para_excluir) # (MODIFICADO) Chama o serviço
         
         if success:
-            messagebox.showinfo("Sucesso", f"'{nome}' foi excluído com sucesso.")
+            temporary_message(self.controller, "Sucesso", f"'{nome}' foi excluído com sucesso.")
             self.popular_lista() 
         
     def on_show(self):
@@ -288,7 +289,7 @@ class CadastroFacialFrame(ttk.Frame):
         nome_arquivo = f"{pose_atual}.jpg"
         caminho_arquivo = os.path.join(self.caminho_pasta, nome_arquivo)
         cv2.imwrite(caminho_arquivo, rosto_recortado)
-        print(f"Rosto recortado e salvo em: {caminho_arquivo}")
+        print(f"[TEMP] Rosto recortado e salvo em: {caminho_arquivo}")
         self.current_pose_index += 1
         if self.current_pose_index < len(self.poses):
             self.atualizar_passo_gui()
@@ -307,7 +308,7 @@ class CadastroFacialFrame(ttk.Frame):
         success = salvar_pessoa_no_banco(nome_final, id_final, self.nome_pasta, self.pessoa_id_atual) # (MODIFICADO) Chama o serviço
         
         if success:
-            messagebox.showinfo("Cadastro Concluído", f"Cadastro de '{nome_final}' salvo com sucesso!\n\nDados salvos no banco e fotos salvas em:\n{self.caminho_pasta}")
+            temporary_message(self.controller, "Cadastro Concluído", f"Cadastro de '{nome_final}' salvo com sucesso!\n\nDados salvos no banco e fotos salvas em:\n{self.caminho_pasta}")
             self.controller.show_frame("ListarPessoasFrame")
         self.capturando = False
         self.nome_entry.config(state=tk.NORMAL)

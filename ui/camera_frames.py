@@ -5,6 +5,7 @@ Módulo das Telas de Câmera (Frontend)
 import tkinter as tk
 from tkinter import ttk 
 from tkinter import messagebox, filedialog
+from ui.widgets import temporary_message
 import os
 import shutil 
 from PIL import Image, ImageTk
@@ -100,7 +101,7 @@ class ListarCamerasFrame(ttk.Frame):
         caminho_mapa = camera_data.get("mapa_path") if camera_data else None
         success = excluir_camera_db(camera_id, caminho_mapa) # (MODIFICADO) Chama o serviço
         if success:
-            messagebox.showinfo("Sucesso", f"Câmera '{nome}' foi excluída com sucesso.")
+            temporary_message(self.controller, "Sucesso", f"Câmera '{nome}' foi excluída com sucesso.")
             self.popular_lista() 
         
     def on_show(self):
@@ -258,9 +259,9 @@ class CadastroCamerasFrame(ttk.Frame):
 
             if not source_path_norm.startswith(base_path_mapas_norm):
                 shutil.copy(source_path, dest_path)
-                print(f"Arquivo de mapa copiado para: {dest_path}")
+                print(f"[TEMP] Arquivo de mapa copiado para: {dest_path}")
             else:
-                print("Arquivo já está (ou deveria estar) na pasta de destino. Pulando cópia.")
+                print("[TEMP] Arquivo já está (ou deveria estar) na pasta de destino. Pulando cópia.")
 
         except Exception as e:
             messagebox.showerror("Erro de Cópia", f"Não foi possível copiar o NOVO arquivo de mapa:\n{source_path}\n\nErro: {e}")
@@ -272,7 +273,7 @@ class CadastroCamerasFrame(ttk.Frame):
         )
         
         if success:
-            messagebox.showinfo("Cadastro Salvo", f"Câmera '{nome}' salva com sucesso no banco de dados!")
+            temporary_message(self.controller, "Cadastro Salvo", f"Câmera '{nome}' salva com sucesso no banco de dados!")
             self.controller.show_frame("ListarCamerasFrame")
 
     def on_show(self):

@@ -140,7 +140,7 @@ class AppPrincipal(tk.Tk):
         """Recarrega os parâmetros do DB e atualiza o estado global."""
         self.parametros = carregar_parametros_db()
         self.title(f"Health Track Unimed - UEPG: {self.parametros.get('fotos')})")
-        print("Parâmetros globais recarregados.")
+        print("[TEMP] Parâmetros globais recarregados.")
         
     def show_frame(self, page_name):
         if self.current_frame_name == page_name:

@@ -4,6 +4,7 @@ Módulo das Telas de Motor (Frontend)
 """
 import tkinter as tk
 from tkinter import ttk, messagebox
+from ui.widgets import temporary_message
 import json
 
 from services.database_service import (
@@ -37,17 +38,19 @@ class ListarMotoresFrame(ttk.Frame):
         tree_frame = ttk.Frame(self)
         tree_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        cols = ("id", "nome", "versao", "ativo")
+        cols = ("id", "nome", "versao", "ativo", "padrao")
         self.tree = ttk.Treeview(tree_frame, columns=cols, show="headings")
         self.tree.column("id", width=50, anchor="center")
         self.tree.column("nome", width=250)
         self.tree.column("versao", width=100, anchor="center")
         self.tree.column("ativo", width=100, anchor="center")
+        self.tree.column("padrao", width=80, anchor="center")
 
         self.tree.heading("id", text="ID")
         self.tree.heading("nome", text="Nome do Motor")
         self.tree.heading("versao", text="Versão")
         self.tree.heading("ativo", text="Ativo")
+        self.tree.heading("padrao", text="Padrão")
 
         self.tree.pack(side="left", fill="both", expand=True)
 
@@ -99,7 +102,7 @@ class ListarMotoresFrame(ttk.Frame):
         
         success = excluir_motor_db(motor_id)
         if success:
-            messagebox.showinfo("Sucesso", f"Motor '{nome}' foi excluído com sucesso.")
+            temporary_message(self.controller, "Sucesso", f"Motor '{nome}' foi excluído com sucesso.")
             self.popular_lista()
 
     def on_show(self):
@@ -150,6 +153,10 @@ class CadastroMotorFrame(ttk.Frame):
         self.ativo_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(form_frame, text="Ativo", variable=self.ativo_var).grid(row=6, column=1, padx=5, pady=8, sticky='w')
 
+        # Campo novo: padrao (apenas um registro pode ser padrão)
+        self.padrao_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(form_frame, text="Padrão", variable=self.padrao_var).grid(row=7, column=1, padx=5, pady=8, sticky='w')
+
         self.btn_salvar = ttk.Button(self, text="Salvar Cadastro", style="Accent.TButton", command=self.salvar_motor)
         self.btn_salvar.pack(pady=20, ipadx=10, ipady=5)
 
@@ -184,6 +191,8 @@ class CadastroMotorFrame(ttk.Frame):
                     self.json_interno_text.insert("1.0", json.dumps(json_content, indent=4))
                 
                 self.ativo_var.set(motor_data.get("ativo", True))
+                # Novo campo 'padrao'
+                self.padrao_var.set(bool(motor_data.get("padrao", False)))
             else:
                 self.controller.show_frame("ListarMotoresFrame")
 
@@ -213,13 +222,14 @@ class CadastroMotorFrame(ttk.Frame):
                 return
 
         ativo = self.ativo_var.get()
+        padrao = self.padrao_var.get()
 
         success = salvar_motor_no_banco(
-            nome, versao, funcao, metodo, json_interno, arquivo_externo, ativo, self.motor_id_atual
+            nome, versao, funcao, metodo, json_interno, arquivo_externo, ativo, padrao, self.motor_id_atual
         )
 
         if success:
-            messagebox.showinfo("Cadastro Salvo", f"Motor '{nome}' salvo com sucesso no banco de dados!")
+            temporary_message(self.controller, "Cadastro Salvo", f"Motor '{nome}' salvo com sucesso no banco de dados!")
             self.controller.show_frame("ListarMotoresFrame")
 
     def on_show(self):

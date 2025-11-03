@@ -5,6 +5,7 @@ Módulo da Tela de Parâmetros (Frontend)
 import tkinter as tk
 from tkinter import ttk 
 from tkinter import messagebox
+from ui.widgets import temporary_message
 
 # (NOVO) Imports dos nossos módulos de "Backend"
 from services.config_service import salvar_parametros_db
@@ -137,7 +138,7 @@ class ParametrosFrame(ttk.Frame):
         
         if success:
             self.controller.recarregar_parametros()
-            messagebox.showinfo("Sucesso", "Parâmetros atualizados com sucesso!")
+            temporary_message(self.controller, "Sucesso", "Parâmetros atualizados com sucesso!")
         
     def on_show(self):
         """Chamado pelo show_frame para garantir que os dados estejam atualizados."""

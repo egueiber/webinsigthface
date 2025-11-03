@@ -24,9 +24,9 @@ def inicializar_db_parametros():
                 print("Inicializando parâmetros padrão no banco de dados...")
                 cur.execute('INSERT INTO sch_supervisorio.tb_parametro ("idParametro") VALUES (DEFAULT)')
                 conn.commit()
-                print("Parâmetros inicializados.")
+                print("[TEMP] Parâmetros inicializados.")
             else:
-                print("Parâmetros já existem.")
+                print("[TEMP] Parâmetros já existem.")
                 
     except Exception as e:
         conn.rollback()
@@ -107,7 +107,7 @@ def salvar_parametros_db(param_id, caminho_fotos, caminho_mapas,
             cur.execute(sql, params)
         conn.commit()
         success = True
-        print("Parâmetros salvos no banco com sucesso.")
+        print("[TEMP] Parâmetros salvos no banco com sucesso.")
     except Exception as e:
         conn.rollback()
         messagebox.showerror("Erro ao Salvar", f"Não foi possível salvar os parâmetros:\n{e}")
