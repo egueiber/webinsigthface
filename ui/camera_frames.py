@@ -5,7 +5,7 @@ Módulo das Telas de Câmera (Frontend)
 import tkinter as tk
 from tkinter import ttk 
 from tkinter import messagebox, filedialog
-from ui.widgets import temporary_message
+from .widgets import temporary_message
 import os
 import shutil 
 from PIL import Image, ImageTk

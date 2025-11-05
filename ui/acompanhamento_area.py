@@ -11,7 +11,7 @@ from datetime import datetime
 
 # (NOVO) Imports dos nossos módulos de "Backend"
 from services.database_service import get_localizacoes_db, get_dados_acompanhamento_db
-from ui.widgets import Tooltip
+from .widgets import Tooltip
 
 class AcompanhamentoAreaFrame(ttk.Frame):
     def __init__(self, parent, controller):

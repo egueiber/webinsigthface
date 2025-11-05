@@ -5,7 +5,7 @@ Módulo da Tela de Parâmetros (Frontend)
 import tkinter as tk
 from tkinter import ttk 
 from tkinter import messagebox
-from ui.widgets import temporary_message
+from .widgets import temporary_message
 
 # (NOVO) Imports dos nossos módulos de "Backend"
 from services.config_service import salvar_parametros_db

@@ -4,7 +4,7 @@ Módulo das Telas de Motor (Frontend)
 """
 import tkinter as tk
 from tkinter import ttk, messagebox
-from ui.widgets import temporary_message
+from .widgets import temporary_message
 import json
 
 from services.database_service import (

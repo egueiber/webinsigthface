@@ -24,16 +24,18 @@ except ImportError:
 from services.config_service import carregar_parametros_db
 
 # (NOVO) Importa os frames (telas)
-from ui.home_frame import HomeFrame
-from ui.pessoa_frames import ListarPessoasFrame, CadastroFacialFrame
-from ui.camera_frames import ListarCamerasFrame, CadastroCamerasFrame
-from ui.motor_frames import ListarMotoresFrame, CadastroMotorFrame
-from ui.parametros_frame import ParametrosFrame
-from ui.acompanhamento_area import AcompanhamentoAreaFrame
-from ui.acompanhamento_pessoa import AcompanhamentoPessoaFrame
+from .home_frame import HomeFrame
+from .pessoa_frames import ListarPessoasFrame, CadastroFacialFrame
+from .camera_frames import ListarCamerasFrame, CadastroCamerasFrame
+from .motor_frames import ListarMotoresFrame, CadastroMotorFrame
+from .parametros_frame import ParametrosFrame
+from .acompanhamento_area import AcompanhamentoAreaFrame
+from .acompanhamento_pessoa import AcompanhamentoPessoaFrame
+from .evento_frames import ListarEventosFrame, CadastroEventoFrame
+from .pessoa_evento_frames import ListarPessoaEventosFrame, CadastroPessoaEventoFrame
 
 # (NOVO) Importa o widget de Tooltip
-from ui.widgets import Tooltip
+from .widgets import Tooltip
 
 class AppPrincipal(tk.Tk):
     def __init__(self, *args, **kwargs):
@@ -99,6 +101,7 @@ class AppPrincipal(tk.Tk):
             ("Pessoas", "ListarPessoasFrame", "pessoa", "Gerenciar cadastro de pessoas"),  
             ("Câmeras", "ListarCamerasFrame", "camera", "Gerenciar cadastro de câmeras"), 
             ("Motores", "ListarMotoresFrame", "config", "Gerenciar motores de processamento"),
+            ("Eventos", "ListarEventosFrame", "config", "Gerenciar cadastro de eventos"),
             ("Acompanhar Área", "AcompanhamentoAreaFrame", "area", "Ver mapa de acompanhamento por área"),
             ("Acompanhar Pessoa", "AcompanhamentoPessoaFrame", "grafo", "Ver grafo de caminhamento por pessoa"),
             ("Parâmetros", "ParametrosFrame", "config", "Configurar parâmetros do sistema")          
@@ -124,6 +127,8 @@ class AppPrincipal(tk.Tk):
                   ListarPessoasFrame, CadastroFacialFrame, 
                   ListarCamerasFrame, CadastroCamerasFrame, 
                   ListarMotoresFrame, CadastroMotorFrame,
+                  ListarEventosFrame, CadastroEventoFrame,
+                  ListarPessoaEventosFrame, CadastroPessoaEventoFrame,
                   AcompanhamentoAreaFrame, AcompanhamentoPessoaFrame,
                   ParametrosFrame):
             page_name = F.__name__
@@ -142,8 +147,8 @@ class AppPrincipal(tk.Tk):
         self.title(f"Health Track Unimed - UEPG: {self.parametros.get('fotos')})")
         print("[TEMP] Parâmetros globais recarregados.")
         
-    def show_frame(self, page_name):
-        if self.current_frame_name == page_name:
+    def show_frame(self, page_name, *args):
+        if self.current_frame_name == page_name and not args:
             return
             
         # Limpa recursos das telas anteriores
@@ -153,13 +158,14 @@ class AppPrincipal(tk.Tk):
             self.frames["CadastroFacialFrame"].release_camera()
         
         # Inicializa recursos da nova tela
-        if page_name == "CadastroFacialFrame":
-            self.frames["CadastroFacialFrame"].iniciar_camera()
+        # Observação: a câmera NÃO é mais iniciada automaticamente ao navegar para o
+        # frame de cadastro facial. A inicialização agora ocorre somente quando o
+        # usuário clicar nos botões de 'Iniciar Cadastro' / 'Iniciar RE-Captura'.
             
         frame = self.frames[page_name]
         
         if hasattr(frame, "on_show"):
-            frame.on_show()
+            frame.on_show(*args)
             
         frame.tkraise()
         self.current_frame_name = page_name
@@ -178,6 +184,17 @@ class AppPrincipal(tk.Tk):
         frame = self.frames["CadastroMotorFrame"]
         frame.carregar_dados(motor_id)
         self.show_frame("CadastroMotorFrame")
+
+    def abrir_edicao_evento(self, evento_id):
+        frame = self.frames["CadastroEventoFrame"]
+        frame.carregar_dados(evento_id)
+        self.show_frame("CadastroEventoFrame")
+
+    def abrir_eventos_pessoa(self, pessoa_id):
+        self.show_frame("ListarPessoaEventosFrame", pessoa_id)
+
+    def abrir_edicao_pessoa_evento(self, pessoa_id, pessoa_evento_id):
+        self.show_frame("CadastroPessoaEventoFrame", pessoa_id, pessoa_evento_id)
 
     def on_closing(self):
         print("Fechando aplicação...")

@@ -449,3 +449,115 @@ def excluir_motor_db(motor_id):
         return False
     finally:
         conn.close()
+
+# --- Funções de Evento ---
+def listar_eventos_db(filtro_nome=""):
+    sql = """
+        SELECT idevento, nomeevento
+        FROM sch_supervisorio.tb_evento
+        WHERE nomeevento ILIKE %s
+        ORDER BY nomeevento
+    """
+    conn = get_db_connection()
+    if conn is None: return []
+    resultados = []
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, (f"%{filtro_nome}%",))
+            resultados = cur.fetchall()
+    except Exception as e:
+        messagebox.showerror("Erro de Consulta", f"Erro ao listar eventos:\n{e}")
+    finally:
+        conn.close()
+    return resultados
+
+# --- Funções de Pessoa-Evento ---
+def listar_eventos_por_pessoa_db(pessoa_id):
+    sql = """
+        SELECT pe.idpessoaevento, e.nomeevento, pe.datahoraentrada, pe.datahoraprevistasaida, pe.datahoraefetivasaida, pe.eventocancelado
+        FROM sch_supervisorio.tb_pessoa_evento pe
+        JOIN sch_supervisorio.tb_evento e ON pe.idevento = e.idevento
+        WHERE pe.idpessoa = %s
+        ORDER BY e.nomeevento
+    """
+    conn = get_db_connection()
+    if conn is None: return []
+    resultados = []
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, (pessoa_id,))
+            resultados = cur.fetchall()
+    except Exception as e:
+        messagebox.showerror("Erro de Consulta", f"Erro ao listar eventos da pessoa:\n{e}")
+    finally:
+        conn.close()
+    return resultados
+
+def get_pessoa_evento_por_id_db(pessoa_evento_id):
+    sql = 'SELECT idpessoa, idevento, datahoraentrada, datahoraprevistasaida, datahoraefetivasaida, eventocancelado FROM sch_supervisorio.tb_pessoa_evento WHERE idpessoaevento = %s'
+    conn = get_db_connection()
+    if conn is None: return None
+    pessoa_evento = None
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, (pessoa_evento_id,))
+            result = cur.fetchone()
+            if result:
+                pessoa_evento = {
+                    "idpessoa": result[0],
+                    "idevento": result[1],
+                    "datahoraentrada": result[2],
+                    "datahoraprevistasaida": result[3],
+                    "datahoraefetivasaida": result[4],
+                    "eventocancelado": result[5]
+                }
+    except Exception as e:
+        messagebox.showerror("Erro de Consulta", f"Erro ao buscar evento da pessoa ID {pessoa_evento_id}:\n{e}")
+    finally:
+        conn.close()
+    return pessoa_evento
+
+def salvar_pessoa_evento_no_banco(idpessoa, idevento, datahoraentrada, datahoraprevistasaida, datahoraefetivasaida, eventocancelado, pessoa_evento_id=None):
+    conn = get_db_connection()
+    if conn is None: return False
+    try:
+        if pessoa_evento_id:
+            sql = """
+                UPDATE sch_supervisorio.tb_pessoa_evento
+                SET idpessoa = %s, idevento = %s, datahoraentrada = %s, datahoraprevistasaida = %s, datahoraefetivasaida = %s, eventocancelado = %s
+                WHERE idpessoaevento = %s
+            """
+            params = (idpessoa, idevento, datahoraentrada, datahoraprevistasaida, datahoraefetivasaida, eventocancelado, pessoa_evento_id)
+        else:
+            sql = """
+                INSERT INTO sch_supervisorio.tb_pessoa_evento
+                (idpessoa, idevento, datahoraentrada, datahoraprevistasaida, datahoraefetivasaida, eventocancelado)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            params = (idpessoa, idevento, datahoraentrada, datahoraprevistasaida, datahoraefetivasaida, eventocancelado)
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        messagebox.showerror("Erro ao Salvar", f"Não foi possível salvar o evento da pessoa no banco:\n{e}")
+        return False
+    finally:
+        conn.close()
+
+def excluir_pessoa_evento_db(pessoa_evento_id):
+    conn = get_db_connection()
+    if conn is None: return False
+    sql = 'DELETE FROM sch_supervisorio.tb_pessoa_evento WHERE idpessoaevento = %s'
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, (pessoa_evento_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        messagebox.showerror("Erro ao Excluir", f"Não foi possível excluir o evento da pessoa:\n{e}")
+        return False
+    finally:
+        conn.close()

@@ -5,7 +5,7 @@ Módulo das Telas de Pessoa (Frontend)
 import tkinter as tk
 from tkinter import ttk 
 from tkinter import messagebox
-from ui.widgets import temporary_message
+from .widgets import temporary_message
 import cv2
 import face_recognition
 import os
@@ -72,6 +72,8 @@ class ListarPessoasFrame(ttk.Frame):
                   command=self.abrir_edicao).pack(side="left", padx=5)
         ttk.Button(action_frame, text="Excluir Selecionado", 
                   command=self.excluir).pack(side="right", padx=5)
+        ttk.Button(action_frame, text="Eventos", 
+                  command=self.abrir_eventos).pack(side="left", padx=5)
 
     def popular_lista(self):
         for i in self.tree.get_children():
@@ -92,6 +94,15 @@ class ListarPessoasFrame(ttk.Frame):
         dados_pessoa = self.tree.item(selecionado)
         pessoa_id = dados_pessoa["values"][0] 
         self.controller.abrir_edicao_pessoa(pessoa_id)
+
+    def abrir_eventos(self):
+        selecionado = self.tree.focus()
+        if not selecionado:
+            messagebox.showwarning("Seleção", "Por favor, selecione uma pessoa na lista para ver os eventos.")
+            return
+        dados_pessoa = self.tree.item(selecionado)
+        pessoa_id = dados_pessoa["values"][0]
+        self.controller.abrir_eventos_pessoa(pessoa_id)
         
     def excluir(self):
         selecionado = self.tree.focus()
@@ -146,14 +157,21 @@ class CadastroFacialFrame(ttk.Frame):
 
         top_frame = ttk.Frame(self)
         top_frame.pack(fill="x", padx=10, pady=10)
-        
+
         self.titulo_label = ttk.Label(top_frame, text="Nova Pessoa", font=("Arial", 18, "bold"))
         self.titulo_label.pack(side="left")
-        ttk.Button(top_frame, text="< Voltar para Lista", 
-                  command=lambda: controller.show_frame("ListarPessoasFrame")).pack(side="right")
-        
+
+        # Indicador visual do estado da câmera (ON/OFF)
+        self.camera_status_label = ttk.Label(top_frame, text="Câmera: OFF", foreground="red")
+        self.camera_status_label.pack(side="right", padx=5)
+
+        tk.Button(top_frame, text="< Voltar para Lista", 
+          command=lambda: controller.show_frame("ListarPessoasFrame")).pack(side="right")
+
         self.video_label = ttk.Label(self)
-        self.instrucao_label = ttk.Label(self, text="Preencha os dados e inicie o cadastro.", font=("Arial", 16))
+        self.video_label.pack(pady=10)
+        
+        self.instrucao_label = ttk.Label(self, text="Preencha os dados e inicie o cadastro.")
         self.instrucao_label.pack(pady=10)
         
         form_frame = ttk.Frame(self)
@@ -204,8 +222,18 @@ class CadastroFacialFrame(ttk.Frame):
             if not self.video_capture.isOpened():
                 messagebox.showerror("Erro de Câmera", "Não foi possível acessar a câmera.")
                 self.video_capture = None
+                # Atualiza indicador
+                try:
+                    self.camera_status_label.config(text="Câmera: OFF", foreground="red")
+                except Exception:
+                    pass
                 self.camera_off_label.pack(pady=5, fill="both", expand=True) 
                 return
+        # Indicador e início do fluxo de vídeo
+        try:
+            self.camera_status_label.config(text="Câmera: ON", foreground="green")
+        except Exception:
+            pass
         self.camera_off_label.pack_forget()
         self.video_label.pack(pady=5)
         self.update_frame()
@@ -217,6 +245,11 @@ class CadastroFacialFrame(ttk.Frame):
             self.video_label.config(image='')
             self.video_label.imgtk = None
             self.video_label.pack_forget()
+            # Atualiza indicador
+            try:
+                self.camera_status_label.config(text="Câmera: OFF", foreground="red")
+            except Exception:
+                pass
             self.camera_off_label.pack(pady=5, fill="both", expand=True)
 
     def update_frame(self):
@@ -264,6 +297,9 @@ class CadastroFacialFrame(ttk.Frame):
         self.id_entry.config(state=tk.DISABLED)
         self.atualizar_passo_gui()
         self.btn_acao.config(command=self.processar_passo, text="Capturar e Prosseguir", style="TButton")
+
+        # Inicia a câmera quando o usuário clica em Iniciar Cadastro / RE-Captura
+        self.iniciar_camera()
 
     def processar_passo(self):
         if not self.capturando or self.video_capture is None:
