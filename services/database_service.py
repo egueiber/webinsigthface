@@ -298,20 +298,39 @@ def get_dados_acompanhamento_db(localizacao, data_filtro):
         conn.close()
     return resultados
 
-def get_pessoas_por_periodo_db(data_inicio, data_fim):
-    sql = """
-        SELECT DISTINCT p."nomePessoa"
-        FROM sch_supervisorio.tb_videos_processados v
-        JOIN sch_supervisorio.tb_pessoa p ON v."nomePastaPessoa" = p."fotosPessoa"
-        WHERE v.datahoraprocessamento::date BETWEEN %s AND %s
-        ORDER BY p."nomePessoa";
-    """
+def get_pessoas_por_periodo_db(data_inicio, data_fim, somente_com_atraso=False):
     conn = get_db_connection()
     if conn is None: return []
+
+    sql = ""
+    params = ()
+
+    if somente_com_atraso:
+        sql = """
+            SELECT DISTINCT p."nomePessoa"
+            FROM sch_supervisorio.tb_pessoa p
+            JOIN sch_supervisorio.tb_pessoa_evento pe ON p."idPessoa" = pe.idpessoa
+            WHERE pe.datahoraentrada::date BETWEEN %s AND %s
+              AND pe.datahoraefetivasaida IS NULL
+              AND (pe.eventocancelado IS NULL OR pe.eventocancelado = FALSE)
+              AND pe.datahoraprevistasaida < CURRENT_TIMESTAMP
+            ORDER BY p."nomePessoa";
+        """
+        params = (data_inicio, data_fim)
+    else:
+        sql = """
+            SELECT DISTINCT p."nomePessoa"
+            FROM sch_supervisorio.tb_videos_processados v
+            JOIN sch_supervisorio.tb_pessoa p ON v."nomePastaPessoa" = p."fotosPessoa"
+            WHERE v.datahoraprocessamento::date BETWEEN %s AND %s
+            ORDER BY p."nomePessoa";
+        """
+        params = (data_inicio, data_fim)
+
     resultados = []
     try:
         with conn.cursor() as cur:
-            cur.execute(sql, (data_inicio, data_fim))
+            cur.execute(sql, params)
             resultados = [row[0] for row in cur.fetchall()]
     except Exception as e:
         messagebox.showerror("Erro de Consulta", f"Erro ao buscar pessoas por período:\n{e}")

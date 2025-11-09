@@ -52,7 +52,7 @@ class ParametrosFrame(ttk.Frame):
         self.intervalo_frames_entry = ttk.Entry(config_frame, width=10)
         self.intervalo_frames_entry.grid(row=0, column=1, padx=5, pady=5)
 
-        ttk.Label(config_frame, text="Escala Imagem (ex: 1):").grid(row=0, column=2, padx=10, pady=5, sticky='e')
+        ttk.Label(config_frame, text="Escala Imagem (ex: 1.0):").grid(row=0, column=2, padx=10, pady=5, sticky='e')
         self.escala_imagem_entry = ttk.Entry(config_frame, width=10)
         self.escala_imagem_entry.grid(row=0, column=3, padx=5, pady=5)
         
@@ -96,7 +96,8 @@ class ParametrosFrame(ttk.Frame):
             self.videos_processados_entry.insert(0, params.get("videos_processados", ""))
             self.video_marcoes_entry.insert(0, params.get("video_marcoes", ""))
             self.intervalo_frames_entry.insert(0, params.get("intervalo_frames", 15))
-            self.escala_imagem_entry.insert(0, params.get("escala_imagem", 1))
+            # mostrar como float por padrão
+            self.escala_imagem_entry.insert(0, params.get("escala_imagem", 1.0))
             self.tolerancia_entry.insert(0, params.get("tolerancia", 0.6))
             self.modelo_deteccao_entry.insert(0, params.get("modelo_deteccao", "hog"))
             self.var_gerar_marcoes.set(params.get("gerar_marcoes", False))
@@ -120,12 +121,13 @@ class ParametrosFrame(ttk.Frame):
 
         try:
             intervalo_frames = int(self.intervalo_frames_entry.get().strip())
-            escala_imagem = int(self.escala_imagem_entry.get().strip())
+            # Escala de imagem agora aceita valores reais (float)
+            escala_imagem = float(self.escala_imagem_entry.get().strip())
             tolerancia = float(self.tolerancia_entry.get().strip())
         except ValueError as e:
             messagebox.showerror("Erro de Validação", 
                                  f"Erro ao converter valores numéricos:\n{e}\n\n"
-                                 "Verifique 'Intervalo Frames', 'Escala Imagem' (inteiros) e 'Tolerância' (float).")
+                                 "Verifique 'Intervalo Frames' (inteiro), 'Escala Imagem' (float) e 'Tolerância' (float).")
             return
             
         gerar_marcoes = self.var_gerar_marcoes.get()

@@ -39,6 +39,9 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
         self.data_final_entry.pack(side="left", padx=5)
         self.data_final_entry.insert(0, datetime.now().strftime("%Y-%m-%d"))
 
+        self.somente_com_atraso_var = tk.BooleanVar()
+        ttk.Checkbutton(filtro_frame, text="Somente com atraso", variable=self.somente_com_atraso_var).pack(side="left", padx=10)
+
         ttk.Button(filtro_frame, text="Buscar Pessoas", style="Accent.TButton",
                   command=self.buscar_pessoas).pack(side="left", padx=10)
         
@@ -94,9 +97,10 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
         if data_inicio is None:
             return
 
-        pessoas = get_pessoas_por_periodo_db(data_inicio, data_fim) # (MODIFICADO) Chama o serviço
+        somente_com_atraso = self.somente_com_atraso_var.get()
+        pessoas = get_pessoas_por_periodo_db(data_inicio, data_fim, somente_com_atraso) # (MODIFICADO) Chama o serviço
         if not pessoas:
-            messagebox.showinfo("Sem Resultados", "Nenhuma pessoa encontrada no período selecionado.")
+            messagebox.showinfo("Sem Resultados", "Nenhuma pessoa encontrada com os filtros selecionados.")
             self.pessoa_combobox['values'] = []
         else:
             self.pessoa_combobox['values'] = pessoas

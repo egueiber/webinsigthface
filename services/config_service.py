@@ -65,10 +65,11 @@ def carregar_parametros_db():
                     "videos_processados": result[4],
                     "video_marcoes": result[5],
                     "intervalo_frames": result[6],
-                    "escala_imagem": result[7],
+                    # garante que escala_imagem seja float
+                    "escala_imagem": float(result[7]) if result[7] is not None else 1.0,
                     "modelo_deteccao": result[8],
                     "tolerancia": result[9],
-                    "gerar_marcoes": result[10] 
+                    "gerar_marcoes": result[10]
                 }
     except Exception as e:
         messagebox.showerror("Erro de Consulta", f"Erro ao carregar parâmetros:\n{e}\n\nCertifique-se que a 'tb_parametro' foi atualizada com TODOS os campos.")

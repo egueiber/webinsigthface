@@ -230,7 +230,8 @@ class ProcessadorApp:
                         "id": result[0], "fotos": result[1], "mapas": result[2],
                         "videos_a_processar": result[3], "videos_processados": result[4],
                         "video_marcoes": result[5], "intervalo_frames": result[6],
-                        "escala_imagem": result[7], "modelo_deteccao": result[8],
+                        "escala_imagem": float(result[7]) if result[7] is not None else 1.0,
+                        "modelo_deteccao": result[8],
                         "tolerancia": result[9], "gerar_marcoes": result[10]
                     }
                     self.adicionar_log("✅ Parâmetros carregados com sucesso.")
