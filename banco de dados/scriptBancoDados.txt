@@ -118,4 +118,21 @@ CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_reconhecimentos_detalhes
     CONSTRAINT tb_reconhecimentos_detalhes_pkey PRIMARY KEY (idreconhecimento)
 );
 
+CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_cenario
+(
+    idcenario integer NOT NULL DEFAULT nextval('sch_supervisorio.tb_cenario_idcenario_seq'::regclass),
+    descricaocenario character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    ativo boolean NOT NULL DEFAULT true,
+    padrao boolean NOT NULL DEFAULT false,
+    CONSTRAINT tb_cenario_pkey PRIMARY KEY (idcenario)
+);
+
+CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_cenariocamera
+(
+    idcenariocamera integer NOT NULL DEFAULT nextval('sch_supervisorio.tb_cenariocamera_idcenariocamera_seq'::regclass),
+    idcenario integer NOT NULL,
+    idcamera integer,
+    CONSTRAINT tb_cenariocamera_pkey PRIMARY KEY (idcenariocamera)
+);
+
 END;

@@ -28,11 +28,12 @@ from .home_frame import HomeFrame
 from .pessoa_frames import ListarPessoasFrame, CadastroFacialFrame
 from .camera_frames import ListarCamerasFrame, CadastroCamerasFrame
 from .motor_frames import ListarMotoresFrame, CadastroMotorFrame
-from .parametros_frame import ParametrosFrame
+from .parametros_frame import ListarParametrosFrame, CadastroParametroFrame
 from .acompanhamento_area import AcompanhamentoAreaFrame
 from .acompanhamento_pessoa import AcompanhamentoPessoaFrame
 from .evento_frames import ListarEventosFrame, CadastroEventoFrame
 from .pessoa_evento_frames import ListarPessoaEventosFrame, CadastroPessoaEventoFrame
+from .cenario_frames import ListarCenariosFrame, CadastroCenarioFrame
 
 # (NOVO) Importa o widget de Tooltip
 from .widgets import Tooltip
@@ -102,9 +103,10 @@ class AppPrincipal(tk.Tk):
             ("Câmeras", "ListarCamerasFrame", "camera", "Gerenciar cadastro de câmeras"), 
             ("Motores", "ListarMotoresFrame", "config", "Gerenciar motores de processamento"),
             ("Eventos", "ListarEventosFrame", "config", "Gerenciar cadastro de eventos"),
+            ("Cenários", "ListarCenariosFrame", "config", "Gerenciar cadastro de cenários"),
             ("Acompanhar Área", "AcompanhamentoAreaFrame", "area", "Ver mapa de acompanhamento por área"),
             ("Acompanhar Pessoa", "AcompanhamentoPessoaFrame", "grafo", "Ver grafo de caminhamento por pessoa"),
-            ("Parâmetros", "ParametrosFrame", "config", "Configurar parâmetros do sistema")          
+            ("Parâmetros", "ListarParametrosFrame", "config", "Configurar parâmetros do sistema")          
         ]
         
         for texto, frame_nome, icone_key, tooltip_text in botoes_menu:
@@ -130,7 +132,8 @@ class AppPrincipal(tk.Tk):
                   ListarEventosFrame, CadastroEventoFrame,
                   ListarPessoaEventosFrame, CadastroPessoaEventoFrame,
                   AcompanhamentoAreaFrame, AcompanhamentoPessoaFrame,
-                  ParametrosFrame):
+                  ListarParametrosFrame, CadastroParametroFrame, 
+                  ListarCenariosFrame, CadastroCenarioFrame):
             page_name = F.__name__
             frame = F(parent=content_frame, controller=self)
             self.frames[page_name] = frame
@@ -189,6 +192,12 @@ class AppPrincipal(tk.Tk):
         frame = self.frames["CadastroEventoFrame"]
         frame.carregar_dados(evento_id)
         self.show_frame("CadastroEventoFrame")
+
+    def abrir_edicao_parametro(self, parametro_id):
+        self.show_frame("CadastroParametroFrame", parametro_id)
+
+    def abrir_edicao_cenario(self, cenario_id):
+        self.show_frame("CadastroCenarioFrame", cenario_id)
 
     def abrir_eventos_pessoa(self, pessoa_id):
         self.show_frame("ListarPessoaEventosFrame", pessoa_id)

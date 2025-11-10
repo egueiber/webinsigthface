@@ -11,6 +11,7 @@ from sys import exit
 
 # Importa o inicializador de parâmetros (backend)
 from services.config_service import inicializar_db_parametros
+#from banco_de_dados.create_cenario_tables import criar_tabelas_cenario
 
 # Importa a classe principal da aplicação (frontend)
 from ui.app_principal import AppPrincipal
@@ -20,6 +21,7 @@ if __name__ == "__main__":
     # 1. Tenta inicializar/verificar os parâmetros do banco
     try:
         inicializar_db_parametros()
+        #criar_tabelas_cenario()
     except Exception as e:
         messagebox.showerror("Erro Crítico de Inicialização", 
                              f"Não foi possível inicializar os parâmetros do banco.\n"
