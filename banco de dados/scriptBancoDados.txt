@@ -2,17 +2,6 @@
 -- Please log an issue at https://github.com/pgadmin-org/pgadmin4/issues/new/choose if you find any bugs, including reproduction steps.
 BEGIN;
 
-
-CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_pessoa
-(
-    "idPessoa" bigint NOT NULL DEFAULT nextval('sch_supervisorio."tb_pessoa_idPessoa_seq"'::regclass),
-    "documentoPessoa" character varying(20) COLLATE pg_catalog."default",
-    "tipoPessoa" "char" DEFAULT 'C'::"char",
-    "nomePessoa" character varying(100) COLLATE pg_catalog."default",
-    "fotosPessoa" character varying(600) COLLATE pg_catalog."default",
-    CONSTRAINT tb_pessoa_pkey PRIMARY KEY ("idPessoa")
-);
-
 CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_cameras
 (
     "idCamera" bigint NOT NULL DEFAULT nextval('sch_supervisorio."tb_cameras_idCamera_seq"'::regclass),
@@ -21,7 +10,35 @@ CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_cameras
     "mapaCamera" character varying(600) COLLATE pg_catalog."default" NOT NULL,
     "andarCamera" integer,
     "nrsalaproximaCamera" integer,
+    notaparaignorar real DEFAULT 0,
+    notaidentificacao real,
     CONSTRAINT tb_cameras_pkey PRIMARY KEY ("idCamera")
+)
+
+CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_cenario
+(
+    idcenario integer NOT NULL DEFAULT nextval('sch_supervisorio.tb_cenario_idcenario_seq'::regclass),
+    descricaocenario character varying(100) COLLATE pg_catalog."default" NOT NULL,
+    ativo boolean NOT NULL DEFAULT true,
+    padrao boolean NOT NULL DEFAULT false,
+    idparametro bigint,
+    CONSTRAINT tb_cenario_pkey PRIMARY KEY (idcenario)
+);
+
+CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_cenariocamera
+(
+    idcenariocamera integer NOT NULL DEFAULT nextval('sch_supervisorio.tb_cenariocamera_idcenariocamera_seq'::regclass),
+    idcenario integer NOT NULL,
+    idcamera integer,
+    CONSTRAINT tb_cenariocamera_pkey PRIMARY KEY (idcenariocamera)
+);
+
+CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_evento
+(
+    idevento integer NOT NULL DEFAULT nextval('sch_supervisorio.tb_evento_idevento_seq'::regclass),
+    nomeevento character varying(70) COLLATE pg_catalog."default" NOT NULL,
+    eventoduracao integer,
+    CONSTRAINT tb_evento_pkey PRIMARY KEY (idevento)
 );
 
 CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_motor
@@ -39,16 +56,6 @@ CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_motor
     CONSTRAINT tb_motor_pkey PRIMARY KEY (idmotor)
 );
 
-CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_evento
-(
-    idevento integer NOT NULL DEFAULT nextval('sch_supervisorio.tb_evento_idevento_seq'::regclass),
-    nomeevento character varying(70) COLLATE pg_catalog."default" NOT NULL,
-    eventoduracao integer,
-    CONSTRAINT tb_evento_pkey PRIMARY KEY (idevento)
-);
-
-
-
 CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_parametro
 (
     "idParametro" bigint NOT NULL DEFAULT nextval('sch_supervisorio."tb_parametro_idParametro_seq"'::regclass),
@@ -63,9 +70,20 @@ CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_parametro
     "modeloDeteccao" character varying(10) COLLATE pg_catalog."default" DEFAULT 'hog'::character varying,
     "toleranciaReconhecimento" real DEFAULT 0.6,
     "caminhoVideoMarcoes" character varying(600) COLLATE pg_catalog."default" DEFAULT 'C:\Program Files\PostgreSQL\18\data\supervisorio\VideoMarcacoes'::character varying,
+    padrao boolean NOT NULL DEFAULT false,
+    nomeparametro character varying(100) COLLATE pg_catalog."default" NOT NULL DEFAULT 'Desempenho'::character varying,
     CONSTRAINT tb_parametro_pkey PRIMARY KEY ("idParametro")
 );
 
+CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_pessoa
+(
+    "idPessoa" bigint NOT NULL DEFAULT nextval('sch_supervisorio."tb_pessoa_idPessoa_seq"'::regclass),
+    "documentoPessoa" character varying(20) COLLATE pg_catalog."default",
+    "tipoPessoa" "char" DEFAULT 'C'::"char",
+    "nomePessoa" character varying(100) COLLATE pg_catalog."default",
+    "fotosPessoa" character varying(600) COLLATE pg_catalog."default",
+    CONSTRAINT tb_pessoa_pkey PRIMARY KEY ("idPessoa")
+);
 
 CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_pessoa_evento
 (
@@ -79,6 +97,21 @@ CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_pessoa_evento
     CONSTRAINT pkeventopessoa PRIMARY KEY (idpessoaevento)
 );
 
+CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_reconhecimentos_detalhes
+(
+    idreconhecimento bigint NOT NULL DEFAULT nextval('sch_supervisorio.tb_reconhecimentos_detalhes_idreconhecimento_seq'::regclass),
+    "idVideo" bigint,
+    nomepastapessoa character varying(100) COLLATE pg_catalog."default",
+    nomearquivofoto character varying(255) COLLATE pg_catalog."default",
+    tempomarcacaosegundos real,
+    notacomparacao real,
+    notafaceland real,
+    avaliacaofoto jsonb,
+    avaliacaoframe jsonb,
+    notafinal real,
+    "notafacemascara " real,
+    CONSTRAINT tb_reconhecimentos_detalhes_pkey PRIMARY KEY (idreconhecimento)
+);
 
 CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_videos_processados
 (
@@ -100,39 +133,4 @@ CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_videos_processados
     notafacemascara real,
     CONSTRAINT tb_videos_pkey PRIMARY KEY ("idVideo")
 );
-
-
-CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_reconhecimentos_detalhes
-(
-    idreconhecimento bigint NOT NULL DEFAULT nextval('sch_supervisorio.tb_reconhecimentos_detalhes_idreconhecimento_seq'::regclass),
-    "idVideo" bigint,
-    nomepastapessoa character varying(100) COLLATE pg_catalog."default",
-    nomearquivofoto character varying(255) COLLATE pg_catalog."default",
-    tempomarcacaosegundos real,
-    notacomparacao real,
-    notafaceland real,
-    avaliacaofoto jsonb,
-    avaliacaoframe jsonb,
-    notafinal real,
-    "notafacemascara " real,
-    CONSTRAINT tb_reconhecimentos_detalhes_pkey PRIMARY KEY (idreconhecimento)
-);
-
-CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_cenario
-(
-    idcenario integer NOT NULL DEFAULT nextval('sch_supervisorio.tb_cenario_idcenario_seq'::regclass),
-    descricaocenario character varying(100) COLLATE pg_catalog."default" NOT NULL,
-    ativo boolean NOT NULL DEFAULT true,
-    padrao boolean NOT NULL DEFAULT false,
-    CONSTRAINT tb_cenario_pkey PRIMARY KEY (idcenario)
-);
-
-CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_cenariocamera
-(
-    idcenariocamera integer NOT NULL DEFAULT nextval('sch_supervisorio.tb_cenariocamera_idcenariocamera_seq'::regclass),
-    idcenario integer NOT NULL,
-    idcamera integer,
-    CONSTRAINT tb_cenariocamera_pkey PRIMARY KEY (idcenariocamera)
-);
-
 END;

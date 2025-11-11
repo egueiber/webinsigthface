@@ -144,12 +144,20 @@ class CadastroCamerasFrame(ttk.Frame):
         self.nrsala_entry = ttk.Entry(form_frame, width=10)
         self.nrsala_entry.grid(row=3, column=1, padx=5, pady=8, sticky='w')
 
-        ttk.Label(form_frame, text="Imagem (Mapa):").grid(row=4, column=0, padx=5, pady=8, sticky='e')
+        ttk.Label(form_frame, text="Nota para Ignorar (0.0 a 1.0):").grid(row=4, column=0, padx=5, pady=8, sticky='e')
+        self.notaignorar_entry = ttk.Entry(form_frame, width=10)
+        self.notaignorar_entry.grid(row=4, column=1, padx=5, pady=8, sticky='w')
+
+        ttk.Label(form_frame, text="Nota de Identificação (0.0 a 1.0):").grid(row=5, column=0, padx=5, pady=8, sticky='e')
+        self.notaidentificacao_entry = ttk.Entry(form_frame, width=10)
+        self.notaidentificacao_entry.grid(row=5, column=1, padx=5, pady=8, sticky='w')
+
+        ttk.Label(form_frame, text="Imagem (Mapa):").grid(row=6, column=0, padx=5, pady=8, sticky='e')
         self.btn_selecionar = ttk.Button(form_frame, text="Selecionar Nova Imagem...", command=self.selecionar_imagem)
-        self.btn_selecionar.grid(row=4, column=1, padx=5, pady=8, sticky='w')
+        self.btn_selecionar.grid(row=6, column=1, padx=5, pady=8, sticky='w')
         
         self.path_label = ttk.Label(form_frame, text="Nenhum arquivo selecionado.", style="Secondary.TLabel") # (MODIFICADO) Usa Style
-        self.path_label.grid(row=5, column=1, padx=5, sticky='w')
+        self.path_label.grid(row=7, column=1, padx=5, sticky='w')
 
         # --- (FIX V7.4) Move o botão para ANTES do mapa ---
         self.btn_salvar = ttk.Button(self, text="Salvar Cadastro", style="Accent.TButton", command=self.salvar_camera)
@@ -166,6 +174,8 @@ class CadastroCamerasFrame(ttk.Frame):
         self.loc_entry.delete(0, tk.END)
         self.andar_entry.delete(0, tk.END)
         self.nrsala_entry.delete(0, tk.END)
+        self.notaignorar_entry.delete(0, tk.END)
+        self.notaidentificacao_entry.delete(0, tk.END)
         
         self.thumbnail_label.config(image='', text="")
         self.thumbnail_label.image = None
@@ -176,6 +186,8 @@ class CadastroCamerasFrame(ttk.Frame):
             self.btn_salvar.config(text="Salvar Nova Câmera")
             self.andar_entry.insert(0, "0")
             self.nrsala_entry.insert(0, "0")
+            self.notaignorar_entry.insert(0, "0.7")
+            self.notaidentificacao_entry.insert(0, "0.7")
         else:
             self.titulo_label.config(text="Editar Câmera")
             self.btn_salvar.config(text="Salvar Alterações") # <-- O texto do botão muda aqui
@@ -186,6 +198,8 @@ class CadastroCamerasFrame(ttk.Frame):
                 self.loc_entry.insert(0, camera_data["localizacao"])
                 self.andar_entry.insert(0, str(camera_data.get("andar", 0)))
                 self.nrsala_entry.insert(0, str(camera_data.get("nrsala", 0)))
+                self.notaignorar_entry.insert(0, str(camera_data.get("notaparaignorar", 0.7)))
+                self.notaidentificacao_entry.insert(0, str(camera_data.get("notaidentificacao", 0.7)))
                 
                 mapa_path = camera_data.get("mapa_path")
                 if mapa_path: # Mesmo que não exista, guardamos o caminho
@@ -233,8 +247,12 @@ class CadastroCamerasFrame(ttk.Frame):
         try:
             andar = int(self.andar_entry.get().strip())
             nrsala = int(self.nrsala_entry.get().strip())
-        except ValueError:
-            messagebox.showerror("Erro de Validação", "Os campos 'Andar' e 'Nº Sala Próxima' devem ser números inteiros.")
+            notaparaignorar = float(self.notaignorar_entry.get().strip())
+            notaidentificacao = float(self.notaidentificacao_entry.get().strip())
+            if not ((0.0 <= notaparaignorar <= 10 and 0.0 <= notaidentificacao <= 10) and (notaparaignorar < notaidentificacao)):
+                raise ValueError("Notas devem estar entre 0.0 e 10.0 e a nota para ignorar deve ser menor a de identificação.")
+        except ValueError as e:
+            messagebox.showerror("Erro de Validação", f"Os campos de nota devem ser números entre 0.0 e 1.0. Os campos 'Andar' e 'Nº Sala Próxima' devem ser números inteiros.\n\nDetalhe: {e}")
             return
 
         if self.filepath_original_selecionado is None:
@@ -269,7 +287,7 @@ class CadastroCamerasFrame(ttk.Frame):
             
         success = salvar_camera_no_banco(
             nome, localizacao, dest_path, 
-            andar, nrsala, self.camera_id_atual
+            andar, nrsala, notaparaignorar, notaidentificacao, self.camera_id_atual
         )
         
         if success:

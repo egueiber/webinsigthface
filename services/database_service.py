@@ -150,7 +150,7 @@ def listar_cameras_db(filtro_nome=""):
 def get_camera_por_id_db(camera_id):
     sql = """
         SELECT "nomeCamera", "localizacaoCamera", "mapaCamera", 
-               "andarCamera", "nrsalaproximaCamera"
+               "andarCamera", "nrsalaproximaCamera", notaparaignorar, notaidentificacao
         FROM sch_supervisorio.tb_cameras WHERE "idCamera" = %s
     """
     conn = get_db_connection()
@@ -166,7 +166,9 @@ def get_camera_por_id_db(camera_id):
                     "localizacao": result[1], 
                     "mapa_path": result[2],
                     "andar": result[3],
-                    "nrsala": result[4]
+                    "nrsala": result[4],
+                    "notaparaignorar": result[5],
+                    "notaidentificacao": result[6]
                 }
     except Exception as e:
         if "column" in str(e) and "does not exist" in str(e):
@@ -177,7 +179,7 @@ def get_camera_por_id_db(camera_id):
         conn.close()
     return camera
 
-def salvar_camera_no_banco(nome, localizacao, caminho_mapa, andar, nrsala, camera_id=None):
+def salvar_camera_no_banco(nome, localizacao, caminho_mapa, andar, nrsala, notaparaignorar, notaidentificacao, camera_id=None):
     """
     Salva (INSERT ou UPDATE) uma câmera no banco.
     A lógica de "if camera_id:" é o que diferencia
@@ -206,18 +208,18 @@ def salvar_camera_no_banco(nome, localizacao, caminho_mapa, andar, nrsala, camer
                 sql = """
                     UPDATE sch_supervisorio.tb_cameras
                     SET "nomeCamera" = %s, "localizacaoCamera" = %s, "mapaCamera" = %s,
-                        "andarCamera" = %s, "nrsalaproximaCamera" = %s
+                        "andarCamera" = %s, "nrsalaproximaCamera" = %s, notaparaignorar = %s, notaidentificacao = %s
                     WHERE "idCamera" = %s
                 """
-                params = (nome, localizacao, caminho_mapa, andar, nrsala, camera_id)
+                params = (nome, localizacao, caminho_mapa, andar, nrsala, notaparaignorar, notaidentificacao, camera_id)
             else:
                 # --- MODO DE CRIAÇÃO (INSERT) ---
                 sql = """
                     INSERT INTO sch_supervisorio.tb_cameras
-                    ("nomeCamera", "localizacaoCamera", "mapaCamera", "andarCamera", "nrsalaproximaCamera")
-                    VALUES (%s, %s, %s, %s, %s)
+                    ("nomeCamera", "localizacaoCamera", "mapaCamera", "andarCamera", "nrsalaproximaCamera", notaparaignorar, notaidentificacao)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """
-                params = (nome, localizacao, caminho_mapa, andar, nrsala)
+                params = (nome, localizacao, caminho_mapa, andar, nrsala, notaparaignorar, notaidentificacao)
             
             cur.execute(sql, params)
         conn.commit() # Salva as alterações
