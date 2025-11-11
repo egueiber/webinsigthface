@@ -170,12 +170,21 @@ class AcompanhamentoAreaFrame(ttk.Frame):
                 messagebox.showinfo("Sem Resultados", f"Nenhum registro encontrado para '{localizacao}' na data '{data_str}'.")
             return
 
-        # 3. Preencher a Lista (Treeview)
+        # 3. Preencher a Lista (Treeview) e agrupar dados por pessoa
         pessoas_unicas = {}
-        for nome_pessoa, data_hora, segundo in dados:
+        for nome_pessoa, data_hora, segundo, notacomparacao, notaparaignorar, notaidentificacao in dados:
             if nome_pessoa not in pessoas_unicas:
-                pessoas_unicas[nome_pessoa] = []
-            pessoas_unicas[nome_pessoa].append(data_hora)
+                pessoas_unicas[nome_pessoa] = {
+                    "horarios": [],
+                    "max_notacomparacao": 0,
+                    "notaparaignorar": notaparaignorar,
+                    "notaidentificacao": notaidentificacao
+                }
+            
+            pessoas_unicas[nome_pessoa]["horarios"].append(data_hora)
+            if notacomparacao > pessoas_unicas[nome_pessoa]["max_notacomparacao"]:
+                pessoas_unicas[nome_pessoa]["max_notacomparacao"] = notacomparacao
+
             horario_str = data_hora.strftime("%H:%M:%S")
             self.tree.insert("", "end", values=(nome_pessoa, horario_str, f"{segundo:.1f}s"))
 
@@ -190,8 +199,18 @@ class AcompanhamentoAreaFrame(ttk.Frame):
         
         raio = 8 
         
-        for i, nome_pessoa in enumerate(pessoas_unicas.keys()):
-            cor_icone = self.cores_icones[i % len(self.cores_icones)]
+        for i, (nome_pessoa, dados_pessoa) in enumerate(pessoas_unicas.items()):
+            # Definir a cor do ícone com base na nota de comparação
+            notacomparacao = dados_pessoa["max_notacomparacao"]
+            notaparaignorar = dados_pessoa["notaparaignorar"]
+            notaidentificacao = dados_pessoa["notaidentificacao"]
+
+            cor_icone = "yellow" # Cor padrão (intermediária)
+            if notacomparacao <= notaparaignorar:
+                cor_icone = "red"
+            elif notacomparacao >= notaidentificacao:
+                cor_icone = "green"
+
             offset_x, offset_y = offsets[i % len(offsets)]
             x = centro_x + offset_x
             y = centro_y + offset_y
@@ -204,9 +223,9 @@ class AcompanhamentoAreaFrame(ttk.Frame):
                                                 tags=(f"icone_{i}")) 
             self.icones_canvas.append(icone) 
 
-            primeira_vez = min(pessoas_unicas[nome_pessoa]).strftime("%H:%M:%S")
-            ultima_vez = max(pessoas_unicas[nome_pessoa]).strftime("%H:%M:%S")
-            contagem = len(pessoas_unicas[nome_pessoa])
+            primeira_vez = min(dados_pessoa["horarios"]).strftime("%H:%M:%S")
+            ultima_vez = max(dados_pessoa["horarios"]).strftime("%H:%M:%S")
+            contagem = len(dados_pessoa["horarios"])
             
             tooltip_text = f"Pessoa: {nome_pessoa}\n" \
                            f"Detecções: {contagem}\n" \

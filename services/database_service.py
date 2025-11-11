@@ -279,7 +279,10 @@ def get_dados_acompanhamento_db(localizacao, data_filtro):
         SELECT 
             p."nomePessoa", 
             v.datahoraprocessamento, 
-            v."tempoMarcacaoSegundos"
+            v."tempoMarcacaoSegundos",
+            v.notacomparacao,
+            c.notaparaignorar,
+            c.notaidentificacao
         FROM sch_supervisorio.tb_videos_processados v
         JOIN sch_supervisorio.tb_cameras c ON v."nomeCamera" = c."nomeCamera"
         JOIN sch_supervisorio.tb_pessoa p ON p."fotosPessoa" = v."nomePastaPessoa"
