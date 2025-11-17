@@ -146,8 +146,10 @@ class CadastroEventoFrame(ttk.Frame):
             self.titulo_label.config(text="Editar Evento")
             evento_data = get_evento_por_id_db(evento_id)
             if evento_data:
-                self.nome_entry.insert(0, evento_data["nome"])
-                self.duracao_entry.insert(0, evento_data["duracao"])
+                self.nome_entry.insert(0, evento_data.get("nome", ""))
+                duracao = evento_data.get("duracao")
+                if duracao is not None:
+                    self.duracao_entry.insert(0, str(duracao))
 
     def salvar(self):
         nome = self.nome_entry.get().strip()
