@@ -24,7 +24,7 @@ except ImportError:
 from services.config_service import carregar_parametros_db
 
 # (NOVO) Importa os frames (telas)
-from .home_frame import HomeFrame
+from .dashboard_frame import DashboardFrame
 from .pessoa_frames import ListarPessoasFrame, CadastroFacialFrame
 from .camera_frames import ListarCamerasFrame, CadastroCamerasFrame
 from .motor_frames import ListarMotoresFrame, CadastroMotorFrame
@@ -99,6 +99,7 @@ class AppPrincipal(tk.Tk):
 
         # (MODIFICADO) Botões do Menu com Ícones e Tooltips
         botoes_menu = [
+            ("Dashboard", "DashboardFrame", "area", "Visualizar dashboard de indicadores"),
             ("Pessoas", "ListarPessoasFrame", "pessoa", "Gerenciar cadastro de pessoas"),  
             ("Câmeras", "ListarCamerasFrame", "camera", "Gerenciar cadastro de câmeras"), 
             ("Motores", "ListarMotoresFrame", "config", "Gerenciar motores de processamento"),
@@ -125,7 +126,7 @@ class AppPrincipal(tk.Tk):
         # --- Frames (Telas) ---
         self.frames = {}
         # (MODIFICADO) Carrega os frames dos módulos importados
-        for F in (HomeFrame, 
+        for F in (DashboardFrame, 
                   ListarPessoasFrame, CadastroFacialFrame, 
                   ListarCamerasFrame, CadastroCamerasFrame, 
                   ListarMotoresFrame, CadastroMotorFrame,
@@ -142,7 +143,7 @@ class AppPrincipal(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.current_frame_name = None
-        self.show_frame("HomeFrame")
+        self.show_frame("DashboardFrame")
 
     def recarregar_parametros(self):
         """Recarrega os parâmetros do DB e atualiza o estado global."""
@@ -204,6 +205,10 @@ class AppPrincipal(tk.Tk):
 
     def abrir_edicao_pessoa_evento(self, pessoa_id, pessoa_evento_id):
         self.show_frame("CadastroPessoaEventoFrame", pessoa_id, pessoa_evento_id)
+
+    def abrir_grafo_pessoa(self, person_data):
+        """Abre o grafo de acompanhamento para uma pessoa específica."""
+        self.show_frame("AcompanhamentoPessoaFrame", person_data)
 
     def on_closing(self):
         print("Fechando aplicação...")

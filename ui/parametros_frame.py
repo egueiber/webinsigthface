@@ -105,6 +105,7 @@ class CadastroParametroFrame(ttk.Frame):
         self.param_id_atual = None
         
         self.var_gerar_marcoes = tk.BooleanVar()
+        self.var_finalizaraoidentificartodos = tk.BooleanVar()
 
         top_frame = ttk.Frame(self)
         top_frame.pack(fill="x", padx=10, pady=10)
@@ -165,6 +166,10 @@ class CadastroParametroFrame(ttk.Frame):
         self.gerar_marcoes_check = ttk.Checkbutton(config_frame, text="Gerar Vídeo com Marcações",
                                                   variable=self.var_gerar_marcoes)
         self.gerar_marcoes_check.grid(row=2, column=1, columnspan=3, padx=5, pady=5, sticky='w')
+        
+        self.finalizaraoidentificartodos_check = ttk.Checkbutton(config_frame, text="Finalizar ao identificar todos com eventos ativos",
+                                                  variable=self.var_finalizaraoidentificartodos)
+        self.finalizaraoidentificartodos_check.grid(row=3, column=1, columnspan=3, padx=5, pady=5, sticky='w')
 
         self.btn_salvar = ttk.Button(self, text="Salvar Parâmetros", style="Accent.TButton", command=self.salvar)
         self.btn_salvar.pack(pady=20, ipadx=10, ipady=5)
@@ -176,6 +181,7 @@ class CadastroParametroFrame(ttk.Frame):
         if param_id is None:
             self.titulo_label.config(text="Novo Parâmetro")
             self.var_gerar_marcoes.set(False)
+            self.var_finalizaraoidentificartodos.set(False)
         else:
             self.titulo_label.config(text="Editar Parâmetro")
             params = get_parametro_por_id_db(param_id)
@@ -191,6 +197,7 @@ class CadastroParametroFrame(ttk.Frame):
                 self.tolerancia_entry.insert(0, params.get("tolerancia", 0.6))
                 self.modelo_deteccao_entry.insert(0, params.get("modelo_deteccao", "hog"))
                 self.var_gerar_marcoes.set(params.get("gerar_marcoes", False))
+                self.var_finalizaraoidentificartodos.set(params.get("finalizaraoidentificartodos", False))
 
     def _limpar_campos(self):
         self.nome_entry.delete(0, tk.END)
@@ -222,7 +229,8 @@ class CadastroParametroFrame(ttk.Frame):
                 "intervalo_frames": int(self.intervalo_frames_entry.get().strip()),
                 "escala_imagem": float(self.escala_imagem_entry.get().strip()),
                 "tolerancia": float(self.tolerancia_entry.get().strip()),
-                "gerar_marcoes": self.var_gerar_marcoes.get()
+                "gerar_marcoes": self.var_gerar_marcoes.get(),
+                "finalizaraoidentificartodos": self.var_finalizaraoidentificartodos.get()
             }
         except ValueError as e:
             messagebox.showerror("Erro de Validação", f"Erro ao converter valores numéricos: {e}")

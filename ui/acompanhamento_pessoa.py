@@ -42,6 +42,9 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
         self.somente_com_atraso_var = tk.BooleanVar()
         ttk.Checkbutton(filtro_frame, text="Somente com atraso", variable=self.somente_com_atraso_var).pack(side="left", padx=10)
 
+        self.identificada_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(filtro_frame, text="Identificada", variable=self.identificada_var).pack(side="left", padx=10)
+
         ttk.Button(filtro_frame, text="Buscar Pessoas", style="Accent.TButton",
                   command=self.buscar_pessoas).pack(side="left", padx=10)
         
@@ -60,11 +63,42 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
         self.graph_frame = ttk.Frame(self, relief=tk.SOLID, borderwidth=1)
         self.graph_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-    def on_show(self):
-        """Limpa a tela ao ser exibida."""
+    def on_show(self, *args):
+        """
+        Limpa a tela e, se dados de uma pessoa forem fornecidos, 
+        gera o grafo automaticamente.
+        """
         self.limpar_grafo()
         self.pessoa_combobox['values'] = []
         self.pessoa_combobox.set("")
+
+        # Se argumentos foram passados (vindo do dashboard)
+        if args and isinstance(args[0], tuple) and len(args[0]) == 4:
+            pessoa_id, pessoa_nome, data_inicio, data_fim = args[0]
+            
+            # Formata as datas para string (o Entry espera string)
+            data_inicio_str = data_inicio.strftime("%Y-%m-%d")
+            data_fim_str = data_fim.strftime("%Y-%m-%d")
+
+            # Define as datas nos campos de entrada
+            self.data_inicio_entry.delete(0, tk.END)
+            self.data_inicio_entry.insert(0, data_inicio_str)
+            self.data_final_entry.delete(0, tk.END)
+            self.data_final_entry.insert(0, data_fim_str)
+
+            # Adiciona a pessoa ao combobox e a seleciona
+            self.pessoa_combobox['values'] = [pessoa_nome]
+            self.pessoa_combobox.set(pessoa_nome)
+            
+            # Gera o grafo
+            self.gerar_grafo()
+        else:
+            # Comportamento padrão: define as datas para o período default
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            self.data_inicio_entry.delete(0, tk.END)
+            self.data_inicio_entry.insert(0, today_str)
+            self.data_final_entry.delete(0, tk.END)
+            self.data_final_entry.insert(0, today_str)
 
     def limpar_grafo(self):
         """Remove o widget do grafo anterior."""
@@ -123,7 +157,7 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
         data_inicio_str = self.data_inicio_entry.get()
         data_fim_str = self.data_final_entry.get()
             
-        caminho_data = get_caminho_pessoa_db(nome_pessoa, data_inicio, data_fim) # (MODIFICADO) Chama o serviço
+        caminho_data = get_caminho_pessoa_db(nome_pessoa, data_inicio, data_fim, self.identificada_var.get()) # (MODIFICADO) Chama o serviço
         
         if not caminho_data:
             messagebox.showinfo("Sem Dados", f"Nenhum dado de caminhamento encontrado para '{nome_pessoa}' neste período.")

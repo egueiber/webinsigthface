@@ -67,7 +67,8 @@ def get_parametro_por_id_db(param_id):
         SELECT "idParametro", nomeparametro, "caminhoFotosClientes", "caminhoMapas",
                "caminhoVideoAProcessar", "caminhoVideoProcessados",
                "caminhoVideoMarcoes", "intevalorFrames", "escalaImagem",
-               "modeloDeteccao", "toleranciaReconhecimento", "gerarvideomarcacoes"
+               "modeloDeteccao", "toleranciaReconhecimento", "gerarvideomarcacoes",
+               "finalizaraoidentificartodos"
         FROM sch_supervisorio.tb_parametro WHERE "idParametro" = %s
     """
     conn = get_db_connection()
@@ -89,7 +90,8 @@ def get_parametro_por_id_db(param_id):
                     "escala_imagem": float(result[8]) if result[8] is not None else 1.0,
                     "modelo_deteccao": result[9],
                     "tolerancia": result[10],
-                    "gerar_marcoes": result[11]
+                    "gerar_marcoes": result[11],
+                    "finalizaraoidentificartodos": result[12]
                 }
             return None
     except Exception as e:
@@ -112,7 +114,7 @@ def salvar_parametros_db(param_data, param_id=None):
                         "caminhoVideoAProcessar" = %s, "caminhoVideoProcessados" = %s,
                         "caminhoVideoMarcoes" = %s, "intevalorFrames" = %s, "escalaImagem" = %s,
                         "modeloDeteccao" = %s, "toleranciaReconhecimento" = %s,
-                        "gerarvideomarcacoes" = %s
+                        "gerarvideomarcacoes" = %s, "finalizaraoidentificartodos" = %s
                     WHERE "idParametro" = %s
                 """
                 params = (
@@ -120,7 +122,8 @@ def salvar_parametros_db(param_data, param_id=None):
                     param_data['videos_a_processar'], param_data['videos_processados'],
                     param_data['video_marcoes'], param_data['intervalo_frames'],
                     param_data['escala_imagem'], param_data['modelo_deteccao'],
-                    param_data['tolerancia'], param_data['gerar_marcoes'], param_id
+                    param_data['tolerancia'], param_data['gerar_marcoes'],
+                    param_data['finalizaraoidentificartodos'], param_id
                 )
             else:
                 sql = """
@@ -128,8 +131,9 @@ def salvar_parametros_db(param_data, param_id=None):
                         nomeparametro, "caminhoFotosClientes", "caminhoMapas",
                         "caminhoVideoAProcessar", "caminhoVideoProcessados",
                         "caminhoVideoMarcoes", "intevalorFrames", "escalaImagem",
-                        "modeloDeteccao", "toleranciaReconhecimento", "gerarvideomarcacoes"
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        "modeloDeteccao", "toleranciaReconhecimento", "gerarvideomarcacoes",
+                        "finalizaraoidentificartodos"
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING "idParametro"
                 """
                 params = (
@@ -137,7 +141,8 @@ def salvar_parametros_db(param_data, param_id=None):
                     param_data['videos_a_processar'], param_data['videos_processados'],
                     param_data['video_marcoes'], param_data['intervalo_frames'],
                     param_data['escala_imagem'], param_data['modelo_deteccao'],
-                    param_data['tolerancia'], param_data['gerar_marcoes']
+                    param_data['tolerancia'], param_data['gerar_marcoes'],
+                    param_data['finalizaraoidentificartodos']
                 )
             
             cur.execute(sql, params)
@@ -182,7 +187,8 @@ def carregar_parametros_db():
         SELECT "idParametro", nomeparametro, "caminhoFotosClientes", "caminhoMapas",
                "caminhoVideoAProcessar", "caminhoVideoProcessados",
                "caminhoVideoMarcoes", "intevalorFrames", "escalaImagem",
-               "modeloDeteccao", "toleranciaReconhecimento", "gerarvideomarcacoes"
+               "modeloDeteccao", "toleranciaReconhecimento", "gerarvideomarcacoes",
+               "finalizaraoidentificartodos"
         FROM sch_supervisorio.tb_parametro LIMIT 1
     """
     conn = get_db_connection()
@@ -207,7 +213,8 @@ def carregar_parametros_db():
                     "escala_imagem": float(result[8]) if result[8] is not None else 1.0,
                     "modelo_deteccao": result[9],
                     "tolerancia": result[10],
-                    "gerar_marcoes": result[11]
+                    "gerar_marcoes": result[11],
+                    "finalizaraoidentificartodos": result[12]
                 }
     except Exception as e:
         messagebox.showerror("Erro de Consulta", f"Erro ao carregar parâmetros:\n{e}\n\nCertifique-se que a 'tb_parametro' foi atualizada com TODOS os campos.")

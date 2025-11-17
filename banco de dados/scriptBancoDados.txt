@@ -72,8 +72,11 @@ CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_parametro
     "caminhoVideoMarcoes" character varying(600) COLLATE pg_catalog."default" DEFAULT 'C:\Program Files\PostgreSQL\18\data\supervisorio\VideoMarcacoes'::character varying,
     padrao boolean NOT NULL DEFAULT false,
     nomeparametro character varying(100) COLLATE pg_catalog."default" NOT NULL DEFAULT 'Desempenho'::character varying,
+    finalizaraoidentificartodos boolean DEFAULT true,
     CONSTRAINT tb_parametro_pkey PRIMARY KEY ("idParametro")
-);
+)
+
+TABLESPACE tbs_supervisorio;
 
 CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_pessoa
 (

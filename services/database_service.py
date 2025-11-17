@@ -343,8 +343,8 @@ def get_pessoas_por_periodo_db(data_inicio, data_fim, somente_com_atraso=False):
         conn.close()
     return resultados
 
-def get_caminho_pessoa_db(nome_pessoa, data_inicio, data_fim):
-    sql = """
+def get_caminho_pessoa_db(nome_pessoa, data_inicio, data_fim, identificada=True):
+    sql_base = """
         SELECT 
             v.datahoraprocessamento, 
             c."nomeCamera", 
@@ -355,14 +355,22 @@ def get_caminho_pessoa_db(nome_pessoa, data_inicio, data_fim):
         JOIN sch_supervisorio.tb_cameras c ON v."nomeCamera" = c."nomeCamera"
         WHERE p."nomePessoa" = %s
         AND v.datahoraprocessamento::date BETWEEN %s AND %s
-        ORDER BY v.datahoraprocessamento;
     """
+    params = (nome_pessoa, data_inicio, data_fim)
+
+    if identificada:
+        sql_final = sql_base + " AND v.identificada = TRUE"
+    else:
+        sql_final = sql_base
+    
+    sql_final += " ORDER BY v.datahoraprocessamento;"
+
     conn = get_db_connection()
     if conn is None: return []
     resultados = []
     try:
         with conn.cursor() as cur:
-            cur.execute(sql, (nome_pessoa, data_inicio, data_fim))
+            cur.execute(sql_final, params)
             resultados = cur.fetchall()
     except Exception as e:
         messagebox.showerror("Erro de Consulta", f"Erro ao buscar caminhamento da pessoa:\n{e}")
