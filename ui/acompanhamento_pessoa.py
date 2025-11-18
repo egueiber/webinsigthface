@@ -7,7 +7,8 @@ Módulo da Tela de Acompanhamento por Pessoa (Frontend)
 import tkinter as tk
 from tkinter import ttk 
 from tkinter import messagebox
-from datetime import datetime 
+from datetime import date, timedelta
+from tkcalendar import DateEntry
 import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
@@ -30,14 +31,13 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
         filtro_frame.pack(fill="x", padx=10, pady=10)
         
         ttk.Label(filtro_frame, text="Data Inicial:").pack(side="left", padx=(0, 5))
-        self.data_inicio_entry = ttk.Entry(filtro_frame, width=12)
+        self.data_inicio_entry = DateEntry(filtro_frame, width=12, date_pattern='dd/mm/yyyy', takefocus=0)
         self.data_inicio_entry.pack(side="left", padx=5)
-        self.data_inicio_entry.insert(0, datetime.now().strftime("%Y-%m-%d"))
+        self.data_inicio_entry.set_date(date.today())
         
         ttk.Label(filtro_frame, text="Data Final:").pack(side="left", padx=(15, 5))
-        self.data_final_entry = ttk.Entry(filtro_frame, width=12)
+        self.data_final_entry = DateEntry(filtro_frame, width=12, date_pattern='dd/mm/yyyy', takefocus=0)
         self.data_final_entry.pack(side="left", padx=5)
-        self.data_final_entry.insert(0, datetime.now().strftime("%Y-%m-%d"))
 
         self.somente_com_atraso_var = tk.BooleanVar()
         ttk.Checkbutton(filtro_frame, text="Somente com atraso", variable=self.somente_com_atraso_var).pack(side="left", padx=10)
@@ -76,15 +76,9 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
         if args and isinstance(args[0], tuple) and len(args[0]) == 4:
             pessoa_id, pessoa_nome, data_inicio, data_fim = args[0]
             
-            # Formata as datas para string (o Entry espera string)
-            data_inicio_str = data_inicio.strftime("%Y-%m-%d")
-            data_fim_str = data_fim.strftime("%Y-%m-%d")
-
             # Define as datas nos campos de entrada
-            self.data_inicio_entry.delete(0, tk.END)
-            self.data_inicio_entry.insert(0, data_inicio_str)
-            self.data_final_entry.delete(0, tk.END)
-            self.data_final_entry.insert(0, data_fim_str)
+            self.data_inicio_entry.set_date(data_inicio)
+            self.data_final_entry.set_date(data_fim)
 
             # Adiciona a pessoa ao combobox e a seleciona
             self.pessoa_combobox['values'] = [pessoa_nome]
@@ -94,11 +88,8 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
             self.gerar_grafo()
         else:
             # Comportamento padrão: define as datas para o período default
-            today_str = datetime.now().strftime("%Y-%m-%d")
-            self.data_inicio_entry.delete(0, tk.END)
-            self.data_inicio_entry.insert(0, today_str)
-            self.data_final_entry.delete(0, tk.END)
-            self.data_final_entry.insert(0, today_str)
+            self.data_inicio_entry.set_date(date.today())
+            self.data_final_entry.set_date(date.today())
 
     def limpar_grafo(self):
         """Remove o widget do grafo anterior."""
@@ -112,15 +103,12 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
 
     def validar_datas(self):
         """Valida as datas de início e fim. Retorna (data_inicio, data_fim) ou None."""
-        data_inicio_str = self.data_inicio_entry.get()
-        data_fim_str = self.data_final_entry.get()
-        try:
-            data_inicio = datetime.strptime(data_inicio_str, "%Y-%m-%d").date()
-            data_fim = datetime.strptime(data_fim_str, "%Y-%m-%d").date()
-            return data_inicio, data_fim
-        except ValueError:
-            messagebox.showwarning("Data Inválida", "Por favor, insira as datas no formato AAAA-MM-DD.")
+        data_inicio = self.data_inicio_entry.get_date()
+        data_fim = self.data_final_entry.get_date()
+        if data_inicio > data_fim:
+            messagebox.showwarning("Data Inválida", "A data de início não pode ser posterior à data de fim.")
             return None, None
+        return data_inicio, data_fim
 
     def buscar_pessoas(self):
         """Busca pessoas com registros no período selecionado."""
@@ -154,8 +142,8 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
         if data_inicio is None:
             return
             
-        data_inicio_str = self.data_inicio_entry.get()
-        data_fim_str = self.data_final_entry.get()
+        data_inicio_str = data_inicio.strftime("%d/%m/%Y")
+        data_fim_str = data_fim.strftime("%d/%m/%Y")
             
         caminho_data = get_caminho_pessoa_db(nome_pessoa, data_inicio, data_fim, self.identificada_var.get()) # (MODIFICADO) Chama o serviço
         

@@ -7,7 +7,8 @@ from tkinter import ttk
 from tkinter import messagebox
 import os
 from PIL import Image, ImageTk
-from datetime import datetime 
+from datetime import date
+from tkcalendar import DateEntry
 
 # (NOVO) Imports dos nossos módulos de "Backend"
 from services.database_service import get_localizacoes_db, get_dados_acompanhamento_db
@@ -35,10 +36,9 @@ class AcompanhamentoAreaFrame(ttk.Frame):
         self.loc_combobox = ttk.Combobox(filtro_frame, state="readonly", width=30)
         self.loc_combobox.pack(side="left", padx=5)
 
-        ttk.Label(filtro_frame, text="Data (AAAA-MM-DD):").pack(side="left", padx=(15, 5))
-        self.data_entry = ttk.Entry(filtro_frame, width=12)
+        ttk.Label(filtro_frame, text="Data:").pack(side="left", padx=(15, 5))
+        self.data_entry = DateEntry(filtro_frame, width=12, date_pattern='dd/mm/yyyy', takefocus=0)
         self.data_entry.pack(side="left", padx=5)
-        self.data_entry.insert(0, datetime.now().strftime("%Y-%m-%d"))
 
         ttk.Button(filtro_frame, text="Buscar", style="Accent.TButton",
                   command=self.buscar_dados).pack(side="left", padx=10)
@@ -84,6 +84,7 @@ class AcompanhamentoAreaFrame(ttk.Frame):
         """Chamado ao exibir o frame. Carrega as localizações."""
         self.carregar_localizacoes()
         self.limpar_tela()
+        self.data_entry.set_date(date.today())
 
     def carregar_localizacoes(self):
         """Busca localizações do DB e preenche o combobox."""
@@ -109,16 +110,11 @@ class AcompanhamentoAreaFrame(ttk.Frame):
         self.limpar_tela()
         
         localizacao = self.loc_combobox.get()
-        data_str = self.data_entry.get()
+        data_selecionada = self.data_entry.get_date()
+        data_str = data_selecionada.strftime("%Y-%m-%d")
 
         if not localizacao:
             messagebox.showwarning("Filtro Incompleto", "Por favor, selecione uma localização.")
-            return
-        
-        try:
-            datetime.strptime(data_str, "%Y-%m-%d")
-        except ValueError:
-            messagebox.showwarning("Data Inválida", "Por favor, insira a data no formato AAAA-MM-DD.")
             return
 
         # 1. Carregar o Mapa no Canvas

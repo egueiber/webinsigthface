@@ -33,7 +33,7 @@ class DashboardFrame(ttk.Frame):
         ttk.Label(filtros_frame, text="Data Início:").grid(row=0, column=0, padx=(0, 5), pady=5, sticky="w")
         self.data_inicio_entry = DateEntry(filtros_frame, width=12, date_pattern='dd/mm/yyyy', takefocus=0)
         self.data_inicio_entry.grid(row=0, column=1, padx=(0, 10), pady=5)
-        self.data_inicio_entry.set_date(date.today() - timedelta(days=30))
+        self.data_inicio_entry.set_date(date.today() - timedelta(days=1))
 
         # Data Fim
         ttk.Label(filtros_frame, text="Data Fim:").grid(row=0, column=2, padx=(0, 5), pady=5, sticky="w")
