@@ -62,15 +62,17 @@ class AcompanhamentoAreaFrame(ttk.Frame):
         tree_container = ttk.Frame(list_frame)
         tree_container.pack(fill="both", expand=True, padx=5, pady=(0, 5))
 
-        cols = ("nome", "horario", "segundo")
+        cols = ("nome", "horario", "segundo", "notacomparacao")
         self.tree = ttk.Treeview(tree_container, columns=cols, show="headings", height=10)
-        self.tree.column("nome", width=180)
-        self.tree.column("horario", width=100, anchor="center")
+        self.tree.column("nome", width=100)
+        self.tree.column("horario", width=80, anchor="center")
         self.tree.column("segundo", width=70, anchor="e")
+        self.tree.column("notacomparacao", width=60, anchor="center")
         
         self.tree.heading("nome", text="Nome")
         self.tree.heading("horario", text="Horário")
-        self.tree.heading("segundo", text="Seg. (Vídeo)")
+        self.tree.heading("segundo", text="Tempo")
+        self.tree.heading("notacomparacao", text="Nota")
         
         scrollbar = ttk.Scrollbar(tree_container, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscroll=scrollbar.set)
@@ -186,7 +188,7 @@ class AcompanhamentoAreaFrame(ttk.Frame):
                 pessoas_unicas[nome_pessoa]["max_notacomparacao"] = notacomparacao
 
             horario_str = data_hora.strftime("%H:%M:%S")
-            self.tree.insert("", "end", values=(nome_pessoa, horario_str, f"{segundo:.1f}s"))
+            self.tree.insert("", "end", values=(nome_pessoa, horario_str, segundo, notacomparacao))
 
         # 4. Desenhar os ícones no mapa
         centro_x = map_x_pos + (map_width / 2)

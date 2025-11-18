@@ -279,7 +279,7 @@ def get_dados_acompanhamento_db(localizacao, data_filtro):
         SELECT 
             p."nomePessoa", 
             v.datahoraprocessamento, 
-            v."tempoMarcacaoSegundos",
+            TO_CHAR((v."tempoMarcacaoSegundos" || ' second')::interval, 'HH24:MI:SS'),
             v.notacomparacao,
             c.notaparaignorar,
             c.notaidentificacao
