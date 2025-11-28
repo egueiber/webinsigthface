@@ -351,7 +351,9 @@ def get_caminho_pessoa_db(nome_pessoa, data_inicio, data_fim, identificada=True)
             v.datahoraprocessamento, 
             c."nomeCamera", 
             c."andarCamera", 
-            c."nrsalaproximaCamera"
+            c."nrsalaproximaCamera",
+            v.nomearquivovideomarcacao,
+            v.segundomarcacao
         FROM sch_supervisorio.tb_videos_processados v
         JOIN sch_supervisorio.tb_pessoa p ON v."nomePastaPessoa" = p."fotosPessoa"
         JOIN sch_supervisorio.tb_cameras c ON v."nomeCamera" = c."nomeCamera"

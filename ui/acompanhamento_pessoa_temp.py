@@ -172,7 +172,9 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
             
         # (MODIFICADO) Lógica do grafo movida para o 'graph_service'
         # A tela só recebe a figura pronta e o cursor
-        fig, cursor = criar_figura_grafo(caminho_data, nome_pessoa, data_inicio_str, data_fim_str)
+        fig, cursor, graph_G, node_ids_ordenados = criar_figura_grafo(
+            caminho_data, nome_pessoa, data_inicio_str, data_fim_str
+        )
         
         if fig is None:
             messagebox.showerror("Erro de Grafo", "Não foi possível gerar a figura do grafo.")
