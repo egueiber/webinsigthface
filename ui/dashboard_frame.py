@@ -104,8 +104,8 @@ class DashboardFrame(ttk.Frame):
 
     def _format_timedelta(self, td):
         """Formata um objeto timedelta para HH:MM:SS."""
-        if not isinstance(td, timedelta):
-            return "00:00:00"
+        # if not isinstance(td, timedelta):
+        #     return "00:00:00"
         total_seconds = int(td.total_seconds())
         hours, remainder = divmod(total_seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
@@ -141,7 +141,8 @@ class DashboardFrame(ttk.Frame):
             
         pessoas_atraso = dashboard_service.get_pessoas_com_atraso(data_inicio, data_fim, cenario_id)
         for id_pessoa, nome, atraso, local in pessoas_atraso:
-            self.tree_pessoas_atraso.insert("", "end", values=(id_pessoa, nome, self._format_timedelta(atraso), local))
+            #self.tree_pessoas_atraso.insert("", "end", values=(id_pessoa, nome, self._format_timedelta(atraso), local))
+            self.tree_pessoas_atraso.insert("", "end", values=(id_pessoa, nome, atraso, local))
 
     def ao_selecionar_pessoa(self, event):
         """Chamado quando uma pessoa é selecionada na lista de atrasos."""

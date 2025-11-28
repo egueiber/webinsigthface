@@ -13,6 +13,7 @@ from tkcalendar import DateEntry
 # (NOVO) Imports dos nossos módulos de "Backend"
 from services.database_service import get_localizacoes_db, get_dados_acompanhamento_db
 from .widgets import Tooltip
+from .video_player import VideoPlayerWindow
 
 class AcompanhamentoAreaFrame(ttk.Frame):
     def __init__(self, parent, controller):
@@ -22,6 +23,7 @@ class AcompanhamentoAreaFrame(ttk.Frame):
         self.localizacoes_mapas = {} 
         self.icones_canvas = [] 
         self.tooltip_window_mapa = None 
+        self.video_window = None
         
         self.cores_icones = [
             "#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF",
@@ -53,26 +55,31 @@ class AcompanhamentoAreaFrame(ttk.Frame):
         self.map_canvas = tk.Canvas(map_frame, relief=tk.SUNKEN, borderwidth=1)
         self.map_canvas.pack(fill="both", expand=True)
 
-        list_frame = ttk.Frame(content_frame, width=400, relief=tk.SOLID, borderwidth=1)
+        list_frame = ttk.Frame(content_frame, width=450, relief=tk.SOLID, borderwidth=1)
         list_frame.pack(side="right", fill="y", expand=False, padx=(5, 0))
         list_frame.pack_propagate(False) 
 
-        ttk.Label(list_frame, text="Pessoas Identificadas", font=("Arial", 12, "bold")).pack(pady=5)
+        ttk.Label(list_frame, text="Pessoas Identificadas (duplo-clique para ver o vídeo)", font=("Arial", 10, "bold")).pack(pady=5)
         
         tree_container = ttk.Frame(list_frame)
         tree_container.pack(fill="both", expand=True, padx=5, pady=(0, 5))
 
-        cols = ("nome", "horario", "segundo", "notacomparacao")
-        self.tree = ttk.Treeview(tree_container, columns=cols, show="headings", height=10)
-        self.tree.column("nome", width=100)
+        cols = ("nome", "horario", "segundo", "notacomparacao", "video_path", "start_time")
+        display_cols = ("nome", "horario", "segundo", "notacomparacao")
+        
+        self.tree = ttk.Treeview(tree_container, columns=cols, displaycolumns=display_cols, show="headings", height=10)
+        
+        self.tree.column("nome", width=120)
         self.tree.column("horario", width=80, anchor="center")
         self.tree.column("segundo", width=70, anchor="e")
-        self.tree.column("notacomparacao", width=60, anchor="center")
+        self.tree.column("notacomparacao", width=80, anchor="center")
         
         self.tree.heading("nome", text="Nome")
         self.tree.heading("horario", text="Horário")
-        self.tree.heading("segundo", text="Tempo")
-        self.tree.heading("notacomparacao", text="Nota")
+        self.tree.heading("segundo", text="Tempo Vídeo")
+        self.tree.heading("notacomparacao", text="Nota Comp.")
+        
+        self.tree.bind("<Double-1>", self.on_tree_double_click)
         
         scrollbar = ttk.Scrollbar(tree_container, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscroll=scrollbar.set)
@@ -162,7 +169,7 @@ class AcompanhamentoAreaFrame(ttk.Frame):
             self.map_canvas.create_text(10, 10, anchor='nw', text=f"Mapa não encontrado para '{localizacao}'\nCaminho: {mapa_path}", fill="red")
 
         # 2. Buscar Dados de Acompanhamento
-        dados = get_dados_acompanhamento_db(localizacao, data_str) # (MODIFICADO) Chama o serviço
+        dados = get_dados_acompanhamento_db(localizacao, data_str)
         if not dados:
             if mapa_path and os.path.exists(mapa_path): 
                 messagebox.showinfo("Sem Resultados", f"Nenhum registro encontrado para '{localizacao}' na data '{data_str}'.")
@@ -170,7 +177,7 @@ class AcompanhamentoAreaFrame(ttk.Frame):
 
         # 3. Preencher a Lista (Treeview) e agrupar dados por pessoa
         pessoas_unicas = {}
-        for nome_pessoa, data_hora, segundo, notacomparacao, notaparaignorar, notaidentificacao in dados:
+        for nome_pessoa, data_hora, segundo, notacomparacao, notaparaignorar, notaidentificacao, video_path, start_second in dados:
             if nome_pessoa not in pessoas_unicas:
                 pessoas_unicas[nome_pessoa] = {
                     "horarios": [],
@@ -184,7 +191,8 @@ class AcompanhamentoAreaFrame(ttk.Frame):
                 pessoas_unicas[nome_pessoa]["max_notacomparacao"] = notacomparacao
 
             horario_str = data_hora.strftime("%H:%M:%S")
-            self.tree.insert("", "end", values=(nome_pessoa, horario_str, segundo, notacomparacao))
+            # Adiciona os dados, incluindo os ocultos, na treeview
+            self.tree.insert("", "end", values=(nome_pessoa, horario_str, segundo, notacomparacao, video_path, start_second))
 
         # 4. Desenhar os ícones no mapa
         centro_x = map_x_pos + (map_width / 2)
@@ -232,6 +240,34 @@ class AcompanhamentoAreaFrame(ttk.Frame):
                            
             self.map_canvas.tag_bind(f"icone_{i}", "<Enter>", lambda e, txt=tooltip_text: self.mostrar_tooltip_icone(e, txt))
             self.map_canvas.tag_bind(f"icone_{i}", "<Leave>", lambda e: self.esconder_tooltip_icone())
+
+    def on_tree_double_click(self, event):
+        """Abre o player de vídeo para o item selecionado na árvore."""
+        if self.video_window and self.video_window.winfo_exists():
+            self.video_window.focus()
+            return
+
+        selection = self.tree.selection()
+        if not selection:
+            return
+        
+        item_id = selection[0]
+        item_values = self.tree.item(item_id, "values")
+        
+        # As colunas são: 0:nome, 1:horario, 2:segundo, 3:notacomparacao, 4:video_path, 5:start_time
+        video_path = item_values[4]
+        try:
+            start_time = int(item_values[5])
+        except (ValueError, TypeError):
+            messagebox.showerror("Erro de Dados", "O tempo de início da marcação no vídeo é inválido.")
+            return
+
+        if not video_path or not os.path.exists(video_path):
+            messagebox.showerror("Arquivo não Encontrado", f"O arquivo de vídeo não foi encontrado no caminho:\n{video_path}")
+            return
+            
+        self.video_window = VideoPlayerWindow(self, video_path, start_time)
+        self.video_window.focus()
 
     def mostrar_tooltip_icone(self, event, texto):
         if self.tooltip_window_mapa:

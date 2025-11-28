@@ -282,7 +282,9 @@ def get_dados_acompanhamento_db(localizacao, data_filtro):
             TO_CHAR((v."tempoMarcacaoSegundos" || ' second')::interval, 'HH24:MI:SS'),
             v.notacomparacao,
             c.notaparaignorar,
-            c.notaidentificacao
+            c.notaidentificacao,
+            v.nomearquivovideomarcacao,
+            v.segundomarcacao
         FROM sch_supervisorio.tb_videos_processados v
         JOIN sch_supervisorio.tb_cameras c ON v."nomeCamera" = c."nomeCamera"
         JOIN sch_supervisorio.tb_pessoa p ON p."fotosPessoa" = v."nomePastaPessoa"
