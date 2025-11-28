@@ -2,6 +2,7 @@
 -- Please log an issue at https://github.com/pgadmin-org/pgadmin4/issues/new/choose if you find any bugs, including reproduction steps.
 BEGIN;
 
+
 CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_cameras
 (
     "idCamera" bigint NOT NULL DEFAULT nextval('sch_supervisorio."tb_cameras_idCamera_seq"'::regclass),
@@ -13,7 +14,7 @@ CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_cameras
     notaparaignorar real DEFAULT 0,
     notaidentificacao real,
     CONSTRAINT tb_cameras_pkey PRIMARY KEY ("idCamera")
-)
+);
 
 CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_cenario
 (
@@ -74,9 +75,7 @@ CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_parametro
     nomeparametro character varying(100) COLLATE pg_catalog."default" NOT NULL DEFAULT 'Desempenho'::character varying,
     finalizaraoidentificartodos boolean DEFAULT true,
     CONSTRAINT tb_parametro_pkey PRIMARY KEY ("idParametro")
-)
-
-TABLESPACE tbs_supervisorio;
+);
 
 CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_pessoa
 (
@@ -134,6 +133,9 @@ CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_videos_processados
     notafaceland real,
     notafinal real,
     notafacemascara real,
+    identificada boolean DEFAULT false,
+    nomearquivovideomarcacao character varying(700) COLLATE pg_catalog."default",
+    segundomarcacao bigint,
     CONSTRAINT tb_videos_pkey PRIMARY KEY ("idVideo")
 );
 END;
