@@ -32,6 +32,7 @@ from .parametros_frame import ListarParametrosFrame, CadastroParametroFrame
 from .acompanhamento_area import AcompanhamentoAreaFrame
 from .acompanhamento_pessoa import AcompanhamentoPessoaFrame
 from .evento_frames import ListarEventosFrame, CadastroEventoFrame
+from .localizacao_frames import ListarLocalizacoesFrame, CadastroLocalizacaoFrame
 from .pessoa_evento_frames import ListarPessoaEventosFrame, CadastroPessoaEventoFrame
 from .cenario_frames import ListarCenariosFrame, CadastroCenarioFrame
 
@@ -105,6 +106,7 @@ class AppPrincipal(tk.Tk):
             ("Motores", "ListarMotoresFrame", "config", "Gerenciar motores de processamento"),
             ("Eventos", "ListarEventosFrame", "config", "Gerenciar cadastro de eventos"),
             ("Cenários", "ListarCenariosFrame", "config", "Gerenciar cadastro de cenários"),
+            ("Localizações", "ListarLocalizacoesFrame", "config", "Gerenciar cadastro de localizações"),
             ("Acompanhar Área", "AcompanhamentoAreaFrame", "area", "Ver mapa de acompanhamento por área"),
             ("Acompanhar Pessoa", "AcompanhamentoPessoaFrame", "grafo", "Ver grafo de caminhamento por pessoa"),
             ("Parâmetros", "ListarParametrosFrame", "config", "Configurar parâmetros do sistema")          
@@ -131,6 +133,7 @@ class AppPrincipal(tk.Tk):
                   ListarCamerasFrame, CadastroCamerasFrame, 
                   ListarMotoresFrame, CadastroMotorFrame,
                   ListarEventosFrame, CadastroEventoFrame,
+                  ListarLocalizacoesFrame, CadastroLocalizacaoFrame,
                   ListarPessoaEventosFrame, CadastroPessoaEventoFrame,
                   AcompanhamentoAreaFrame, AcompanhamentoPessoaFrame,
                   ListarParametrosFrame, CadastroParametroFrame, 
@@ -193,6 +196,11 @@ class AppPrincipal(tk.Tk):
         frame = self.frames["CadastroEventoFrame"]
         frame.carregar_dados(evento_id)
         self.show_frame("CadastroEventoFrame")
+
+    def abrir_edicao_localizacao(self, localizacao_id):
+        frame = self.frames["CadastroLocalizacaoFrame"]
+        frame.carregar_dados(localizacao_id)
+        self.show_frame("CadastroLocalizacaoFrame")
 
     def abrir_edicao_parametro(self, parametro_id):
         self.show_frame("CadastroParametroFrame", parametro_id)
