@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_cameras
     "idCamera" bigint NOT NULL DEFAULT nextval('sch_supervisorio."tb_cameras_idCamera_seq"'::regclass),
     "nomeCamera" character varying(20) COLLATE pg_catalog."default" NOT NULL,
     "localizacaoCamera" character varying(30) COLLATE pg_catalog."default" NOT NULL,
-    "mapaCamera" character varying(600) COLLATE pg_catalog."default" NOT NULL,
     "andarCamera" integer,
     "nrsalaproximaCamera" integer,
     notaparaignorar real DEFAULT 0,
@@ -138,4 +137,11 @@ CREATE TABLE IF NOT EXISTS sch_supervisorio.tb_videos_processados
     segundomarcacao bigint,
     CONSTRAINT tb_videos_pkey PRIMARY KEY ("idVideo")
 );
+
+ALTER TABLE IF EXISTS sch_supervisorio.tb_localizacao
+    ADD COLUMN mapacamera character varying(600);
+
+ALTER TABLE IF EXISTS sch_supervisorio.tb_cameras
+    DROP COLUMN mapacamera;
+
 END;

@@ -116,17 +116,17 @@ class DashboardFrame(ttk.Frame):
         data_inicio = self.data_inicio_entry.get_date()
         data_fim = self.data_fim_entry.get_date()
         
-        # Pega o ID do cenário selecionado
-        cenario_selecionado = self.localizacao_combo.get()
-        cenario_id = None
-        if cenario_selecionado != "Todas":
+        # Pega o ID da localização selecionada
+        localizacao_selecionada = self.localizacao_combo.get()
+        localizacao_id = None
+        if localizacao_selecionada != "Todas":
             for loc_id, loc_nome in self.localizacoes:
-                if loc_nome == cenario_selecionado:
-                    cenario_id = loc_id
+                if loc_nome == localizacao_selecionada:
+                    localizacao_id = loc_id
                     break
         
         # --- Atualiza Indicadores ---
-        indicadores = dashboard_service.get_indicadores(data_inicio, data_fim, cenario_id)
+        indicadores = dashboard_service.get_indicadores(data_inicio, data_fim, localizacao_id)
         self.total_atendidos_var.set(str(indicadores.get('total_atendidos', 0)))
         self.tempo_medio_var.set(self._format_timedelta(indicadores.get('tempo_medio')))
         self.total_presentes_var.set(str(indicadores.get('total_presentes', 0)))
@@ -139,7 +139,7 @@ class DashboardFrame(ttk.Frame):
         for item in self.tree_pessoas_atraso.get_children():
             self.tree_pessoas_atraso.delete(item)
             
-        pessoas_atraso = dashboard_service.get_pessoas_com_atraso(data_inicio, data_fim, cenario_id)
+        pessoas_atraso = dashboard_service.get_pessoas_com_atraso(data_inicio, data_fim, localizacao_id)
         for id_pessoa, nome, atraso, local in pessoas_atraso:
             #self.tree_pessoas_atraso.insert("", "end", values=(id_pessoa, nome, self._format_timedelta(atraso), local))
             self.tree_pessoas_atraso.insert("", "end", values=(id_pessoa, nome, atraso, local))

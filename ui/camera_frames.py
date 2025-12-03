@@ -17,6 +17,8 @@ from services.database_service import (
     salvar_camera_no_banco, 
     excluir_camera_db
 )
+from services.localizacao_service import listar_localizacoes_db
+
 
 # --- Módulo 2A: Lista de Câmeras ---
 class ListarCamerasFrame(ttk.Frame):
@@ -95,11 +97,10 @@ class ListarCamerasFrame(ttk.Frame):
         dados_camera = self.tree.item(selecionado)
         camera_id = dados_camera["values"][0]
         nome = dados_camera["values"][1]
-        if not messagebox.askyesno("Confirmar Exclusão", f"Tem certeza que deseja excluir a câmera '{nome}' (ID: {camera_id})?\n\nO MAPA ASSOCIADO SERÁ APAGADO PERMANENTEMENTE."):
+        if not messagebox.askyesno("Confirmar Exclusão", f"Tem certeza que deseja excluir a câmera '{nome}' (ID: {camera_id})?"):
             return
-        camera_data = get_camera_por_id_db(camera_id) # (MODIFICADO) Chama o serviço
-        caminho_mapa = camera_data.get("mapa_path") if camera_data else None
-        success = excluir_camera_db(camera_id, caminho_mapa) # (MODIFICADO) Chama o serviço
+        
+        success = excluir_camera_db(camera_id) # (MODIFICADO) Chama o serviço
         if success:
             temporary_message(self.controller, "Sucesso", f"Câmera '{nome}' foi excluída com sucesso.")
             self.popular_lista() 
@@ -113,8 +114,8 @@ class CadastroCamerasFrame(ttk.Frame):
     def __init__(self, parent, controller):
         ttk.Frame.__init__(self, parent)
         self.controller = controller
-        self.filepath_original_selecionado = None 
         self.camera_id_atual = None
+        self.localizacoes = {}  # Dicionário para mapear nome da localização para ID
         
         top_frame = ttk.Frame(self)
         top_frame.pack(fill="x", padx=10, pady=10)
@@ -133,8 +134,8 @@ class CadastroCamerasFrame(ttk.Frame):
         self.nome_entry.grid(row=0, column=1, padx=5, pady=8)
         
         ttk.Label(form_frame, text="Localização:").grid(row=1, column=0, padx=5, pady=8, sticky='e')
-        self.loc_entry = ttk.Entry(form_frame, width=40)
-        self.loc_entry.grid(row=1, column=1, padx=5, pady=8)
+        self.loc_combobox = ttk.Combobox(form_frame, width=38, state="readonly")
+        self.loc_combobox.grid(row=1, column=1, padx=5, pady=8)
 
         ttk.Label(form_frame, text="Andar (ex: 0, 1, -1):").grid(row=2, column=0, padx=5, pady=8, sticky='e')
         self.andar_entry = ttk.Entry(form_frame, width=10)
@@ -152,35 +153,29 @@ class CadastroCamerasFrame(ttk.Frame):
         self.notaidentificacao_entry = ttk.Entry(form_frame, width=10)
         self.notaidentificacao_entry.grid(row=5, column=1, padx=5, pady=8, sticky='w')
 
-        ttk.Label(form_frame, text="Imagem (Mapa):").grid(row=6, column=0, padx=5, pady=8, sticky='e')
-        self.btn_selecionar = ttk.Button(form_frame, text="Selecionar Nova Imagem...", command=self.selecionar_imagem)
-        self.btn_selecionar.grid(row=6, column=1, padx=5, pady=8, sticky='w')
-        
-        self.path_label = ttk.Label(form_frame, text="Nenhum arquivo selecionado.", style="Secondary.TLabel") # (MODIFICADO) Usa Style
-        self.path_label.grid(row=7, column=1, padx=5, sticky='w')
-
-        # --- (FIX V7.4) Move o botão para ANTES do mapa ---
         self.btn_salvar = ttk.Button(self, text="Salvar Cadastro", style="Accent.TButton", command=self.salvar_camera)
-        self.btn_salvar.pack(pady=20, ipadx=10, ipady=5) # <-- BOTÃO (AGORA VISÍVEL)
-
-        self.thumbnail_label = ttk.Label(self, relief="solid", style="Card.TLabel", anchor="center")
-        self.thumbnail_label.pack(pady=10, ipadx=100, ipady=100) # <-- MAPA
-        
+        self.btn_salvar.pack(pady=20, ipadx=10, ipady=5)
 
     def carregar_dados(self, camera_id):
         self.camera_id_atual = camera_id
-        self.filepath_original_selecionado = None 
+        
+        # Limpa campos
         self.nome_entry.delete(0, tk.END)
-        self.loc_entry.delete(0, tk.END)
+        self.loc_combobox.set('')
         self.andar_entry.delete(0, tk.END)
         self.nrsala_entry.delete(0, tk.END)
         self.notaignorar_entry.delete(0, tk.END)
         self.notaidentificacao_entry.delete(0, tk.END)
         
-        self.thumbnail_label.config(image='', text="")
-        self.thumbnail_label.image = None
-        self.path_label.config(text="Nenhum arquivo selecionado.", style="Secondary.TLabel")
-        
+        # Carrega e popula as localizações
+        try:
+            loc_data = listar_localizacoes_db()
+            self.localizacoes = {loc[1]: loc[0] for loc in loc_data} # Nome -> ID
+            self.loc_combobox['values'] = list(self.localizacoes.keys())
+        except Exception as e:
+            messagebox.showerror("Erro de Banco de Dados", f"Não foi possível carregar as localizações: {e}")
+            self.loc_combobox['values'] = []
+
         if camera_id is None:
             self.titulo_label.config(text="Nova Câmera")
             self.btn_salvar.config(text="Salvar Nova Câmera")
@@ -190,60 +185,41 @@ class CadastroCamerasFrame(ttk.Frame):
             self.notaidentificacao_entry.insert(0, "0.7")
         else:
             self.titulo_label.config(text="Editar Câmera")
-            self.btn_salvar.config(text="Salvar Alterações") # <-- O texto do botão muda aqui
-            camera_data = get_camera_por_id_db(self.camera_id_atual) # (MODIFICADO) Chama o serviço
+            self.btn_salvar.config(text="Salvar Alterações")
+            camera_data = get_camera_por_id_db(self.camera_id_atual)
             
             if camera_data:
                 self.nome_entry.insert(0, camera_data["nome"])
-                self.loc_entry.insert(0, camera_data["localizacao"])
+                
+                # Encontra o nome da localização pelo ID
+                idlocalizacao = camera_data.get("idlocalizacao")
+                nome_localizacao = ""
+                for nome, id_loc in self.localizacoes.items():
+                    if id_loc == idlocalizacao:
+                        nome_localizacao = nome
+                        break
+                self.loc_combobox.set(nome_localizacao)
+
                 self.andar_entry.insert(0, str(camera_data.get("andar", 0)))
                 self.nrsala_entry.insert(0, str(camera_data.get("nrsala", 0)))
                 self.notaignorar_entry.insert(0, str(camera_data.get("notaparaignorar", 0.7)))
                 self.notaidentificacao_entry.insert(0, str(camera_data.get("notaidentificacao", 0.7)))
-                
-                mapa_path = camera_data.get("mapa_path")
-                if mapa_path: # Mesmo que não exista, guardamos o caminho
-                    self.filepath_original_selecionado = mapa_path # Guarda o caminho do DB
-                    if os.path.exists(mapa_path):
-                        self.exibir_thumbnail(mapa_path)
-                        self.path_label.config(text=f"(Atual) {os.path.basename(mapa_path)}", style="TLabel")
-                    else:
-                        self.path_label.config(text="(Arquivo de mapa não encontrado!)", style="Error.TLabel")
             else:
                 self.controller.show_frame("ListarCamerasFrame")
 
-
-    def selecionar_imagem(self):
-        filetypes = (('Imagens', '*.jpg *.jpeg *.png *.bmp'), ('Todos os arquivos', '*.*'))
-        filepath = filedialog.askopenfilename(title='Selecione uma imagem de mapa', filetypes=filetypes)
-        if filepath:
-            self.filepath_original_selecionado = filepath # Sobrepõe o caminho do DB com o novo
-            self.path_label.config(text=os.path.basename(filepath), style="TLabel")
-            self.exibir_thumbnail(filepath)
-
-    def exibir_thumbnail(self, filepath):
-        try:
-            img = Image.open(filepath)
-            max_size = (300, 300)
-            img.thumbnail(max_size)
-            imgtk = ImageTk.PhotoImage(image=img)
-            self.thumbnail_label.config(image=imgtk, text="") # Remove texto
-            self.thumbnail_label.image = imgtk 
-        except Exception as e:
-            messagebox.showerror("Erro de Imagem", f"Não foi possível carregar a imagem: {e}")
-            self.thumbnail_label.config(image='', text="Erro ao carregar imagem")
-            self.thumbnail_label.image = None
-            self.path_label.config(text="Arquivo inválido.", style="Error.TLabel")
-            self.filepath_original_selecionado = None
-
     def salvar_camera(self):
         nome = self.nome_entry.get().strip()
-        localizacao = self.loc_entry.get().strip()
+        nome_localizacao = self.loc_combobox.get()
         
-        if not nome or not localizacao:
-            messagebox.showwarning("Dados Incompletos", "Por favor, preencha Nome e Localização.")
+        if not nome or not nome_localizacao:
+            messagebox.showwarning("Dados Incompletos", "Por favor, preencha Nome e selecione uma Localização.")
             return
             
+        idlocalizacao = self.localizacoes.get(nome_localizacao)
+        if idlocalizacao is None:
+            messagebox.showerror("Erro de Validação", "Localização selecionada é inválida.")
+            return
+
         try:
             andar = int(self.andar_entry.get().strip())
             nrsala = int(self.nrsala_entry.get().strip())
@@ -254,39 +230,9 @@ class CadastroCamerasFrame(ttk.Frame):
         except ValueError as e:
             messagebox.showerror("Erro de Validação", f"Os campos de nota devem ser números entre 0.0 e 1.0. Os campos 'Andar' e 'Nº Sala Próxima' devem ser números inteiros.\n\nDetalhe: {e}")
             return
-
-        if self.filepath_original_selecionado is None:
-             messagebox.showwarning("Dados Incompletos", "Por favor, selecione uma imagem para o mapa.")
-             return
-             
-        base_path_mapas = self.controller.parametros.get("mapas") # Pasta de destino
-        
-        try:
-            os.makedirs(base_path_mapas, exist_ok=True)
-        except Exception as e:
-             messagebox.showerror("Erro de Parâmetro", f"Não foi possível criar a pasta de destino dos mapas:\n{base_path_mapas}\n\nErro: {e}")
-             return
-        
-        source_path = self.filepath_original_selecionado
-        nome_arquivo = os.path.basename(source_path)
-        dest_path = os.path.join(base_path_mapas, nome_arquivo) # Caminho de destino final
-        
-        try:
-            base_path_mapas_norm = os.path.normpath(base_path_mapas)
-            source_path_norm = os.path.normpath(source_path)
-
-            if not source_path_norm.startswith(base_path_mapas_norm):
-                shutil.copy(source_path, dest_path)
-                print(f"[TEMP] Arquivo de mapa copiado para: {dest_path}")
-            else:
-                print("[TEMP] Arquivo já está (ou deveria estar) na pasta de destino. Pulando cópia.")
-
-        except Exception as e:
-            messagebox.showerror("Erro de Cópia", f"Não foi possível copiar o NOVO arquivo de mapa:\n{source_path}\n\nErro: {e}")
-            return
             
         success = salvar_camera_no_banco(
-            nome, localizacao, dest_path, 
+            nome, idlocalizacao, 
             andar, nrsala, notaparaignorar, notaidentificacao, self.camera_id_atual
         )
         

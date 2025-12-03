@@ -5,7 +5,8 @@ Este projeto é uma aplicação de desktop desenvolvida em Python e Tkinter para
 ## 🚀 Funcionalidades Principais
 
 * **Gerenciamento de Pessoas:** CRUD completo de usuários, incluindo um assistente de captura facial guiada por webcam.
-* **Gerenciamento de Câmeras:** CRUD de câmeras, permitindo o upload de mapas de localização (plantas baixas) e a definição de metadados (andar, sala próxima).
+* **Gerenciamento de Localizações:** CRUD de localizações, permitindo o upload de mapas (plantas baixas) para cada registro.
+* **Gerenciamento de Câmeras:** CRUD de câmeras, permitindo a associação de câmeras a uma localização e a definição de metadados (andar, sala próxima).
 * **Acompanhamento por Área:** Visualização em mapa (planta baixa) das pessoas detectadas em uma determinada localização e data.
 * **Acompanhamento por Pessoa:** Geração de um grafo de caminhamento que mostra a sequência de câmeras pelas quais uma pessoa passou ao longo de um período.
 * **Painel de Parâmetros:** Tela centralizada para configurar todos os caminhos de pastas (fotos, mapas, vídeos) e parâmetros de reconhecimento facial (tolerância, modelo).
@@ -47,6 +48,7 @@ O projeto foi refatorado para seguir uma estrutura que separa a lógica de inter
 |   |-- home_frame.py         (Tela inicial)
 |   |-- pessoa_frames.py      (Telas de listar e cadastrar pessoa)
 |   |-- camera_frames.py      (Telas de listar e cadastrar câmera)
+|   |-- localizacao_frames.py (Telas de listar e cadastrar localização, com upload de mapa)
 |   |-- parametros_frame.py   (Tela de parâmetros)
 |   |-- acompanhamento_area.py(Tela do mapa de área)
 |   |-- acompanhamento_pessoa.py(Tela do grafo de pessoa)

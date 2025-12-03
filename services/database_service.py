@@ -129,10 +129,11 @@ def excluir_pessoa_db(pessoa_id, pasta_fotos_completa):
 # --- Funções de Câmera ---
 def listar_cameras_db(filtro_nome=""):
     sql = """
-        SELECT "idCamera", "nomeCamera", "localizacaoCamera" 
-        FROM sch_supervisorio.tb_cameras
-        WHERE "nomeCamera" ILIKE %s
-        ORDER BY "nomeCamera"
+        SELECT c."idCamera", c."nomeCamera", l.nomelocalizacao
+        FROM sch_supervisorio.tb_cameras c
+        JOIN sch_supervisorio.tb_localizacao l ON c.idlocalizacao = l.idlocalizacao
+        WHERE c."nomeCamera" ILIKE %s
+        ORDER BY c."nomeCamera"
     """
     conn = get_db_connection()
     if conn is None: return []
@@ -149,7 +150,7 @@ def listar_cameras_db(filtro_nome=""):
 
 def get_camera_por_id_db(camera_id):
     sql = """
-        SELECT "nomeCamera", "localizacaoCamera", "mapaCamera", 
+        SELECT "nomeCamera", idlocalizacao, 
                "andarCamera", "nrsalaproximaCamera", notaparaignorar, notaidentificacao
         FROM sch_supervisorio.tb_cameras WHERE "idCamera" = %s
     """
@@ -163,12 +164,11 @@ def get_camera_por_id_db(camera_id):
             if result:
                 camera = {
                     "nome": result[0], 
-                    "localizacao": result[1], 
-                    "mapa_path": result[2],
-                    "andar": result[3],
-                    "nrsala": result[4],
-                    "notaparaignorar": result[5],
-                    "notaidentificacao": result[6]
+                    "idlocalizacao": result[1],
+                    "andar": result[2],
+                    "nrsala": result[3],
+                    "notaparaignorar": result[4],
+                    "notaidentificacao": result[5]
                 }
     except Exception as e:
         if "column" in str(e) and "does not exist" in str(e):
@@ -179,7 +179,7 @@ def get_camera_por_id_db(camera_id):
         conn.close()
     return camera
 
-def salvar_camera_no_banco(nome, localizacao, caminho_mapa, andar, nrsala, notaparaignorar, notaidentificacao, camera_id=None):
+def salvar_camera_no_banco(nome, idlocalizacao, andar, nrsala, notaparaignorar, notaidentificacao, camera_id=None):
     """
     Salva (INSERT ou UPDATE) uma câmera no banco.
     A lógica de "if camera_id:" é o que diferencia
@@ -204,22 +204,21 @@ def salvar_camera_no_banco(nome, localizacao, caminho_mapa, andar, nrsala, notap
 
             if camera_id:
                 # --- MODO DE EDIÇÃO (UPDATE) ---
-                # Esta é a lógica que faltava no seu V5.0
                 sql = """
                     UPDATE sch_supervisorio.tb_cameras
-                    SET "nomeCamera" = %s, "localizacaoCamera" = %s, "mapaCamera" = %s,
+                    SET "nomeCamera" = %s, idlocalizacao = %s,
                         "andarCamera" = %s, "nrsalaproximaCamera" = %s, notaparaignorar = %s, notaidentificacao = %s
                     WHERE "idCamera" = %s
                 """
-                params = (nome, localizacao, caminho_mapa, andar, nrsala, notaparaignorar, notaidentificacao, camera_id)
+                params = (nome, idlocalizacao, andar, nrsala, notaparaignorar, notaidentificacao, camera_id)
             else:
                 # --- MODO DE CRIAÇÃO (INSERT) ---
                 sql = """
                     INSERT INTO sch_supervisorio.tb_cameras
-                    ("nomeCamera", "localizacaoCamera", "mapaCamera", "andarCamera", "nrsalaproximaCamera", notaparaignorar, notaidentificacao)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ("nomeCamera", idlocalizacao, "andarCamera", "nrsalaproximaCamera", notaparaignorar, notaidentificacao)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                 """
-                params = (nome, localizacao, caminho_mapa, andar, nrsala, notaparaignorar, notaidentificacao)
+                params = (nome, idlocalizacao, andar, nrsala, notaparaignorar, notaidentificacao)
             
             cur.execute(sql, params)
         conn.commit() # Salva as alterações
@@ -231,7 +230,7 @@ def salvar_camera_no_banco(nome, localizacao, caminho_mapa, andar, nrsala, notap
     finally:
         conn.close()
 
-def excluir_camera_db(camera_id, caminho_mapa):
+def excluir_camera_db(camera_id):
     conn = get_db_connection()
     if conn is None: return False
     sql = 'DELETE FROM sch_supervisorio.tb_cameras WHERE "idCamera" = %s'
@@ -239,12 +238,6 @@ def excluir_camera_db(camera_id, caminho_mapa):
         with conn.cursor() as cur:
             cur.execute(sql, (camera_id,))
         conn.commit()
-        if caminho_mapa and os.path.exists(caminho_mapa):
-            try:
-                os.remove(caminho_mapa)
-                print(f"[TEMP] Arquivo de mapa excluído: {caminho_mapa}")
-            except Exception as e_fs:
-                messagebox.showwarning("Aviso", f"Câmera excluída do banco, but falha ao excluir arquivo de mapa:\n{e_fs}")
         return True
     except Exception as e:
         conn.rollback()
@@ -254,25 +247,7 @@ def excluir_camera_db(camera_id, caminho_mapa):
         conn.close()
 
 # --- Funções de Acompanhamento ---
-def get_localizacoes_db():
-    sql = """
-        SELECT DISTINCT "localizacaoCamera", "mapaCamera" 
-        FROM sch_supervisorio.tb_cameras
-        ORDER BY "localizacaoCamera"
-    """
-    conn = get_db_connection()
-    if conn is None: return {}
-    localizacoes = {}
-    try:
-        with conn.cursor() as cur:
-            cur.execute(sql)
-            resultados = cur.fetchall()
-            localizacoes = {loc: mapa for loc, mapa in resultados}
-    except Exception as e:
-        messagebox.showerror("Erro de Consulta", f"Erro ao listar localizações:\n{e}")
-    finally:
-        conn.close()
-    return localizacoes
+
 
 def get_dados_acompanhamento_db(localizacao, data_filtro):
     sql = """
@@ -381,6 +356,62 @@ def get_caminho_pessoa_db(nome_pessoa, data_inicio, data_fim, identificada=True)
     finally:
         conn.close()
     return resultados
+
+
+def get_localizacoes_db():
+    """Retorna um dicionário {nome_localizacao: caminho_do_mapa_ou_None}.
+    Procura a pasta de mapas na tabela de parâmetros e tenta casar arquivos
+    com o nome da localização. Se não encontrar um mapa, o valor será None.
+    """
+    conn = get_db_connection()
+    if conn is None:
+        return {}
+
+    mapas_dir = None
+    localizacoes = []
+    try:
+        with conn.cursor() as cur:
+            # tenta ler o caminho configurado de mapas
+            try:
+                cur.execute('SELECT "caminhoMapas" FROM sch_supervisorio.tb_parametro LIMIT 1')
+                res = cur.fetchone()
+                if res:
+                    mapas_dir = res[0]
+            except Exception:
+                # não é crítico — apenas prosseguir sem pasta de mapas
+                mapas_dir = None
+
+            # busca todas as localizações cadastradas
+            cur.execute('SELECT nomelocalizacao FROM sch_supervisorio.tb_localizacao ORDER BY nomelocalizacao')
+            rows = cur.fetchall()
+            localizacoes = [r[0] for r in rows]
+    except Exception as e:
+        messagebox.showerror("Erro de Consulta", f"Erro ao buscar localizações:\n{e}")
+        conn.close()
+        return {}
+    finally:
+        conn.close()
+
+    result = {}
+    candidate_files = []
+    if mapas_dir and os.path.isdir(mapas_dir):
+        try:
+            candidate_files = os.listdir(mapas_dir)
+        except Exception:
+            candidate_files = []
+
+    for nome in localizacoes:
+        mapa_encontrado = None
+        if candidate_files:
+            nome_base = nome.strip().lower()
+            for fname in candidate_files:
+                base, ext = os.path.splitext(fname)
+                if base.strip().lower() == nome_base and ext.lower() in ('.png', '.jpg', '.jpeg', '.bmp'):
+                    mapa_encontrado = os.path.join(mapas_dir, fname)
+                    break
+        result[nome] = mapa_encontrado
+
+    return result
 
 # --- Funções de Motor ---
 def listar_motores_db(filtro_nome=""):
@@ -583,17 +614,31 @@ def salvar_pessoa_evento_no_banco(idpessoa, idevento, datahoraentrada, datahorap
         conn.close()
 
 def excluir_pessoa_evento_db(pessoa_evento_id):
+
     conn = get_db_connection()
+
     if conn is None: return False
+
     sql = 'DELETE FROM sch_supervisorio.tb_pessoa_evento WHERE idpessoaevento = %s'
+
     try:
+
         with conn.cursor() as cur:
+
             cur.execute(sql, (pessoa_evento_id,))
+
         conn.commit()
+
         return True
+
     except Exception as e:
+
         conn.rollback()
+
         messagebox.showerror("Erro ao Excluir", f"Não foi possível excluir o evento da pessoa:\n{e}")
+
         return False
+
     finally:
+
         conn.close()
