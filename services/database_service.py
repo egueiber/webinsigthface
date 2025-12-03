@@ -249,7 +249,7 @@ def excluir_camera_db(camera_id):
 # --- Funções de Acompanhamento ---
 
 
-def get_dados_acompanhamento_db(localizacao, data_filtro):
+def get_dados_acompanhamento_db(localizacao_id, data_filtro):
     sql = """
         SELECT 
             p."nomePessoa", 
@@ -263,7 +263,7 @@ def get_dados_acompanhamento_db(localizacao, data_filtro):
         FROM sch_supervisorio.tb_videos_processados v
         JOIN sch_supervisorio.tb_cameras c ON v."nomeCamera" = c."nomeCamera"
         JOIN sch_supervisorio.tb_pessoa p ON p."fotosPessoa" = v."nomePastaPessoa"
-        WHERE c."localizacaoCamera" = %s 
+        WHERE c.idlocalizacao = %s 
         AND v.datahoraprocessamento::date = %s
         ORDER BY v.datahoraprocessamento;
     """
@@ -272,7 +272,7 @@ def get_dados_acompanhamento_db(localizacao, data_filtro):
     resultados = []
     try:
         with conn.cursor() as cur:
-            cur.execute(sql, (localizacao, data_filtro))
+            cur.execute(sql, (localizacao_id, data_filtro))
             resultados = cur.fetchall()
     except Exception as e:
         messagebox.showerror("Erro de Consulta", f"Erro ao buscar dados de acompanhamento:\n{e}")
@@ -280,13 +280,12 @@ def get_dados_acompanhamento_db(localizacao, data_filtro):
         conn.close()
     return resultados
 
-def get_pessoas_por_periodo_db(data_inicio, data_fim, somente_com_atraso=False):
+def get_pessoas_por_periodo_db(data_inicio, data_fim, somente_com_atraso=False, localizacao_id=None):
     conn = get_db_connection()
     if conn is None: return []
 
-    sql = ""
-    params = ()
-
+    params = []
+    
     if somente_com_atraso:
         sql = """
             SELECT DISTINCT p."nomePessoa"
@@ -296,23 +295,28 @@ def get_pessoas_por_periodo_db(data_inicio, data_fim, somente_com_atraso=False):
               AND pe.datahoraefetivasaida IS NULL
               AND (pe.eventocancelado IS NULL OR pe.eventocancelado = FALSE)
               AND pe.datahoraprevistasaida < CURRENT_TIMESTAMP
-            ORDER BY p."nomePessoa";
         """
-        params = (data_inicio, data_fim)
+        params.extend([data_inicio, data_fim])
     else:
         sql = """
             SELECT DISTINCT p."nomePessoa"
             FROM sch_supervisorio.tb_videos_processados v
             JOIN sch_supervisorio.tb_pessoa p ON v."nomePastaPessoa" = p."fotosPessoa"
+            JOIN sch_supervisorio.tb_cameras c ON v."nomeCamera" = c."nomeCamera"
             WHERE v.datahoraprocessamento::date BETWEEN %s AND %s
-            ORDER BY p."nomePessoa";
         """
-        params = (data_inicio, data_fim)
+        params.extend([data_inicio, data_fim])
+        
+        if localizacao_id:
+            sql += ' AND c.idlocalizacao = %s'
+            params.append(localizacao_id)
+
+    sql += ' ORDER BY p."nomePessoa"'
 
     resultados = []
     try:
         with conn.cursor() as cur:
-            cur.execute(sql, params)
+            cur.execute(sql, tuple(params))
             resultados = [row[0] for row in cur.fetchall()]
     except Exception as e:
         messagebox.showerror("Erro de Consulta", f"Erro ao buscar pessoas por período:\n{e}")
@@ -358,8 +362,27 @@ def get_caminho_pessoa_db(nome_pessoa, data_inicio, data_fim, identificada=True)
     return resultados
 
 
+def get_all_localizacoes_db():
+    """Retorna uma lista com os nomes de todas as localizações."""
+    conn = get_db_connection()
+    if conn is None:
+        return []
+    
+    localizacoes = []
+    try:
+        with conn.cursor() as cur:
+            cur.execute('SELECT idlocalizacao, nomelocalizacao FROM sch_supervisorio.tb_localizacao ORDER BY nomelocalizacao')
+            localizacoes = cur.fetchall()
+    except Exception as e:
+        messagebox.showerror("Erro de Consulta", f"Erro ao buscar todas as localizações:\n{e}")
+    finally:
+        conn.close()
+    
+    return localizacoes
+
 def get_localizacoes_db():
-    """Retorna um dicionário {nome_localizacao: caminho_do_mapa_ou_None}.
+    """
+    Retorna um dicionário {nome_localizacao: {'id': id, 'mapa': caminho_do_mapa_ou_None}}.
     Procura a pasta de mapas na tabela de parâmetros e tenta casar arquivos
     com o nome da localização. Se não encontrar um mapa, o valor será None.
     """
@@ -382,9 +405,8 @@ def get_localizacoes_db():
                 mapas_dir = None
 
             # busca todas as localizações cadastradas
-            cur.execute('SELECT nomelocalizacao FROM sch_supervisorio.tb_localizacao ORDER BY nomelocalizacao')
-            rows = cur.fetchall()
-            localizacoes = [r[0] for r in rows]
+            cur.execute('SELECT idlocalizacao, nomelocalizacao FROM sch_supervisorio.tb_localizacao ORDER BY nomelocalizacao')
+            localizacoes = cur.fetchall()
     except Exception as e:
         messagebox.showerror("Erro de Consulta", f"Erro ao buscar localizações:\n{e}")
         conn.close()
@@ -400,7 +422,7 @@ def get_localizacoes_db():
         except Exception:
             candidate_files = []
 
-    for nome in localizacoes:
+    for loc_id, nome in localizacoes:
         mapa_encontrado = None
         if candidate_files:
             nome_base = nome.strip().lower()
@@ -409,7 +431,7 @@ def get_localizacoes_db():
                 if base.strip().lower() == nome_base and ext.lower() in ('.png', '.jpg', '.jpeg', '.bmp'):
                     mapa_encontrado = os.path.join(mapas_dir, fname)
                     break
-        result[nome] = mapa_encontrado
+        result[nome] = {'id': loc_id, 'mapa': mapa_encontrado}
 
     return result
 

@@ -16,7 +16,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import os
 
 # (NOVO) Imports dos nossos módulos de "Backend"
-from services.database_service import get_pessoas_por_periodo_db, get_caminho_pessoa_db
+from services.database_service import get_pessoas_por_periodo_db, get_caminho_pessoa_db, get_all_localizacoes_db
 from services.graph_service import criar_figura_grafo
 from .video_player import VideoPlayerWindow
 
@@ -29,27 +29,41 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
         self.graph_figure = None
         self.tooltip_cursor = None
         self.video_window = None
+        self.localizacoes = {}
 
         # --- Frame de Filtros ---
         filtro_frame = ttk.Frame(self)
         filtro_frame.pack(fill="x", padx=10, pady=10)
-        
-        ttk.Label(filtro_frame, text="Data Inicial:").pack(side="left", padx=(0, 5))
+
+        # Usar grid para melhor organização
+        filtro_frame.columnconfigure((0, 2, 4), weight=0)
+        filtro_frame.columnconfigure((1, 3, 5), weight=1)
+
+        # Linha 1
+        ttk.Label(filtro_frame, text="Data Inicial:").grid(row=0, column=0, padx=(0, 5), pady=2, sticky="w")
         self.data_inicio_entry = DateEntry(filtro_frame, width=12, date_pattern='dd/mm/yyyy', takefocus=0)
-        self.data_inicio_entry.pack(side="left", padx=5)
+        self.data_inicio_entry.grid(row=0, column=1, padx=5, pady=2, sticky="w")
         self.data_inicio_entry.set_date(date.today())
         
-        ttk.Label(filtro_frame, text="Data Final:").pack(side="left", padx=(15, 5))
+        ttk.Label(filtro_frame, text="Data Final:").grid(row=0, column=2, padx=(15, 5), pady=2, sticky="w")
         self.data_final_entry = DateEntry(filtro_frame, width=12, date_pattern='dd/mm/yyyy', takefocus=0)
-        self.data_final_entry.pack(side="left", padx=5)
+        self.data_final_entry.grid(row=0, column=3, padx=5, pady=2, sticky="w")
+
+        ttk.Label(filtro_frame, text="Localização:").grid(row=0, column=4, padx=(15, 5), pady=2, sticky="w")
+        self.loc_combobox = ttk.Combobox(filtro_frame, state="readonly", width=30)
+        self.loc_combobox.grid(row=0, column=5, padx=5, pady=2, sticky="ew")
+
+        # Linha 2 (checkboxes e botão)
+        check_button_frame = ttk.Frame(filtro_frame)
+        check_button_frame.grid(row=1, column=0, columnspan=6, pady=(5, 0), sticky="ew")
 
         self.somente_com_atraso_var = tk.BooleanVar()
-        ttk.Checkbutton(filtro_frame, text="Somente com atraso", variable=self.somente_com_atraso_var).pack(side="left", padx=10)
+        ttk.Checkbutton(check_button_frame, text="Somente com atraso", variable=self.somente_com_atraso_var).pack(side="left", padx=(0,10))
 
         self.identificada_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(filtro_frame, text="Identificada", variable=self.identificada_var).pack(side="left", padx=10)
+        ttk.Checkbutton(check_button_frame, text="Identificada", variable=self.identificada_var).pack(side="left", padx=10)
 
-        ttk.Button(filtro_frame, text="Buscar Pessoas", style="Accent.TButton",
+        ttk.Button(check_button_frame, text="Buscar Pessoas", style="Accent.TButton",
                   command=self.buscar_pessoas).pack(side="left", padx=10)
         
         # --- Frame de Seleção ---
@@ -115,6 +129,7 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
         self.limpar_grafo()
         self.pessoa_combobox['values'] = []
         self.pessoa_combobox.set("")
+        self.carregar_localizacoes()
 
         # Se argumentos foram passados (vindo do dashboard)
         if args and isinstance(args[0], tuple) and len(args[0]) == 4:
@@ -134,6 +149,19 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
             # Comportamento padrão: define as datas para o período default
             self.data_inicio_entry.set_date(date.today())
             self.data_final_entry.set_date(date.today())
+
+    def carregar_localizacoes(self):
+        """Busca localizações do DB e preenche o combobox."""
+        locs = get_all_localizacoes_db()
+        # Adiciona a opção "Todas" no início
+        self.localizacoes = {"Todas": None}
+        for loc_id, loc_nome in locs:
+            self.localizacoes[loc_nome] = loc_id
+        
+        loc_nomes = list(self.localizacoes.keys())
+        self.loc_combobox['values'] = loc_nomes
+        if loc_nomes:
+            self.loc_combobox.current(0)
 
     def limpar_grafo(self):
         """Remove o widget do grafo anterior e limpa a lista de eventos."""
@@ -168,8 +196,11 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
         if data_inicio is None:
             return
 
+        loc_nome = self.loc_combobox.get()
+        loc_id = self.localizacoes.get(loc_nome)
+
         somente_com_atraso = self.somente_com_atraso_var.get()
-        pessoas = get_pessoas_por_periodo_db(data_inicio, data_fim, somente_com_atraso) # (MODIFICADO) Chama o serviço
+        pessoas = get_pessoas_por_periodo_db(data_inicio, data_fim, somente_com_atraso, loc_id)
         if not pessoas:
             messagebox.showinfo("Sem Resultados", "Nenhuma pessoa encontrada com os filtros selecionados.")
             self.pessoa_combobox['values'] = []

@@ -95,7 +95,7 @@ class AcompanhamentoAreaFrame(ttk.Frame):
 
     def carregar_localizacoes(self):
         """Busca localizações do DB e preenche o combobox."""
-        self.localizacoes_mapas = get_localizacoes_db() # (MODIFICADO) Chama o serviço
+        self.localizacoes_mapas = get_localizacoes_db() 
         loc_nomes = list(self.localizacoes_mapas.keys())
         self.loc_combobox['values'] = loc_nomes
         if loc_nomes:
@@ -116,16 +116,21 @@ class AcompanhamentoAreaFrame(ttk.Frame):
         """Função principal que busca dados e atualiza a tela."""
         self.limpar_tela()
         
-        localizacao = self.loc_combobox.get()
+        loc_nome_selecionada = self.loc_combobox.get()
         data_selecionada = self.data_entry.get_date()
         data_str = data_selecionada.strftime("%Y-%m-%d")
 
-        if not localizacao:
+        if not loc_nome_selecionada:
             messagebox.showwarning("Filtro Incompleto", "Por favor, selecione uma localização.")
             return
 
-        # 1. Carregar o Mapa no Canvas
-        mapa_path = self.localizacoes_mapas.get(localizacao)
+        loc_info = self.localizacoes_mapas.get(loc_nome_selecionada)
+        if not loc_info:
+            messagebox.showerror("Erro de Dados", "Não foi possível encontrar informações para a localização selecionada.")
+            return
+            
+        loc_id = loc_info['id']
+        mapa_path = loc_info['mapa']
         
         map_x_pos, map_y_pos = 0, 0
         map_width, map_height = 100, 100
@@ -166,13 +171,13 @@ class AcompanhamentoAreaFrame(ttk.Frame):
                 print(f"Erro ao carregar imagem: {e}")
                 self.map_canvas.create_text(10, 10, anchor='nw', text=f"Erro ao carregar mapa:\n{e}", fill="red")
         else:
-            self.map_canvas.create_text(10, 10, anchor='nw', text=f"Mapa não encontrado para '{localizacao}'\nCaminho: {mapa_path}", fill="red")
+            self.map_canvas.create_text(10, 10, anchor='nw', text=f"Mapa não encontrado para '{loc_nome_selecionada}'\nCaminho: {mapa_path}", fill="red")
 
         # 2. Buscar Dados de Acompanhamento
-        dados = get_dados_acompanhamento_db(localizacao, data_str)
+        dados = get_dados_acompanhamento_db(loc_id, data_str)
         if not dados:
             if mapa_path and os.path.exists(mapa_path): 
-                messagebox.showinfo("Sem Resultados", f"Nenhum registro encontrado para '{localizacao}' na data '{data_str}'.")
+                messagebox.showinfo("Sem Resultados", f"Nenhum registro encontrado para '{loc_nome_selecionada}' na data '{data_str}'.")
             return
 
         # 3. Preencher a Lista (Treeview) e agrupar dados por pessoa
