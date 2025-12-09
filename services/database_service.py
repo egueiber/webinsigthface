@@ -12,11 +12,23 @@ import os
 import shutil
 
 # --- Configuração do Banco de Dados ---
-DB_NAME = "postgres"
-DB_USER = "supervisorio"
-DB_PASS = "supervisorio101"
-DB_HOST = "localhost"
-DB_PORT = 5432
+# Alterne para True para usar o banco de dados do Docker Compose
+DOCKER_DB = True
+
+if DOCKER_DB:
+    # Configurações para o banco de dados no contêiner Docker
+    DB_NAME = "postgres"
+    DB_USER = "postgres"
+    DB_PASS = "postgres"
+    DB_HOST = "localhost"  # O Docker Compose mapeia a porta para localhost
+    DB_PORT = 5433
+else:
+    # Configurações originais
+    DB_NAME = "postgres"
+    DB_USER = "supervisorio"
+    DB_PASS = "supervisorio101"
+    DB_HOST = "localhost"
+    DB_PORT = 5432
 
 # --- Conexão ---
 def get_db_connection():

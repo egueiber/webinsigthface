@@ -66,7 +66,7 @@ def get_parametro_por_id_db(param_id):
     sql = """
         SELECT "idParametro", nomeparametro, "caminhoFotosClientes", "caminhoMapas",
                "caminhoVideoAProcessar", "caminhoVideoProcessados",
-               "caminhoVideoMarcoes", "intevalorFrames", "escalaImagem",
+               "caminhoVideoMarcacoes", "intevalorFrames", "escalaImagem",
                "modeloDeteccao", "toleranciaReconhecimento", "gerarvideomarcacoes",
                "finalizaraoidentificartodos"
         FROM sch_supervisorio.tb_parametro WHERE "idParametro" = %s
@@ -112,7 +112,7 @@ def salvar_parametros_db(param_data, param_id=None):
                     UPDATE sch_supervisorio.tb_parametro
                     SET nomeparametro = %s, "caminhoFotosClientes" = %s, "caminhoMapas" = %s,
                         "caminhoVideoAProcessar" = %s, "caminhoVideoProcessados" = %s,
-                        "caminhoVideoMarcoes" = %s, "intevalorFrames" = %s, "escalaImagem" = %s,
+                        "caminhoVideoMarcacoes" = %s, "intevalorFrames" = %s, "escalaImagem" = %s,
                         "modeloDeteccao" = %s, "toleranciaReconhecimento" = %s,
                         "gerarvideomarcacoes" = %s, "finalizaraoidentificartodos" = %s
                     WHERE "idParametro" = %s
@@ -130,7 +130,7 @@ def salvar_parametros_db(param_data, param_id=None):
                     INSERT INTO sch_supervisorio.tb_parametro (
                         nomeparametro, "caminhoFotosClientes", "caminhoMapas",
                         "caminhoVideoAProcessar", "caminhoVideoProcessados",
-                        "caminhoVideoMarcoes", "intevalorFrames", "escalaImagem",
+                        "caminhoVideoMarcacoes", "intevalorFrames", "escalaImagem",
                         "modeloDeteccao", "toleranciaReconhecimento", "gerarvideomarcacoes",
                         "finalizaraoidentificartodos"
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -186,7 +186,7 @@ def carregar_parametros_db():
     sql = """
         SELECT "idParametro", nomeparametro, "caminhoFotosClientes", "caminhoMapas",
                "caminhoVideoAProcessar", "caminhoVideoProcessados",
-               "caminhoVideoMarcoes", "intevalorFrames", "escalaImagem",
+               "caminhoVideoMarcacoes", "intevalorFrames", "escalaImagem",
                "modeloDeteccao", "toleranciaReconhecimento", "gerarvideomarcacoes",
                "finalizaraoidentificartodos"
         FROM sch_supervisorio.tb_parametro LIMIT 1
