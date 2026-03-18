@@ -5,21 +5,19 @@ Módulo de Serviço de Configuração (Backend)
 Centraliza a lógica de inicialização, leitura e escrita
 da tabela de parâmetros do sistema.
 """
-from tkinter import messagebox
-from services.database_service import get_db_connection
+from backend.services.database_service import get_db_connection
 
-def inicializar_db_parametros():
+
+def initialize_db_parameters():
     """Garante que a tabela de parâmetros tenha pelo menos uma linha de configuração."""
     print("Verificando parâmetros...")
     conn = get_db_connection()
-    if conn is None:
-        return
 
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) FROM sch_supervisorio.tb_parametro")
             count = cur.fetchone()[0]
-            
+
             if count == 0:
                 print("Inicializando parâmetros padrão no banco de dados...")
                 cur.execute("""
@@ -27,21 +25,18 @@ def inicializar_db_parametros():
                     VALUES ('Padrão')
                 """)
                 conn.commit()
-                print("[TEMP] Parâmetros inicializados.")
+                print("[INFO] Parâmetros inicializados.")
             else:
-                print("[TEMP] Parâmetros já existem.")
-                
+                print("[INFO] Parâmetros já existem.")
+
     except Exception as e:
         conn.rollback()
-        if "column" in str(e) and "does not exist" in str(e):
-             messagebox.showerror("Erro de Banco de Dados", f"Erro: A estrutura da tabela 'tb_parametro' parece estar desatualizada.\n{e}")
-        else:
-            messagebox.showerror("Erro Crítico de DB", f"Não foi possível ler ou inicializar a 'tb_parametro'.\n{e}")
-        return
+        raise Exception(f"Não foi possível ler ou inicializar a 'tb_parametro': {e}")
     finally:
         conn.close()
 
-def listar_parametros_db(filtro_nome=""):
+
+def list_parameters(name_filter: str = ""):
     """Lista todos os conjuntos de parâmetros, com filtro opcional por nome."""
     sql = """
         SELECT "idParametro", nomeparametro
@@ -50,18 +45,15 @@ def listar_parametros_db(filtro_nome=""):
         ORDER BY nomeparametro
     """
     conn = get_db_connection()
-    if conn is None: return []
     try:
         with conn.cursor() as cur:
-            cur.execute(sql, (f"%{filtro_nome}%",))
+            cur.execute(sql, (f"%{name_filter}%",))
             return cur.fetchall()
-    except Exception as e:
-        messagebox.showerror("Erro de Consulta", f"Erro ao listar parâmetros:\n{e}")
-        return []
     finally:
         conn.close()
 
-def get_parametro_por_id_db(param_id):
+
+def get_parameter_by_id(param_id: int):
     """Busca um conjunto de parâmetros específico pelo seu ID."""
     sql = """
         SELECT "idParametro", nomeparametro, "caminhoFotosClientes", "caminhoMapas",
@@ -72,7 +64,6 @@ def get_parametro_por_id_db(param_id):
         FROM sch_supervisorio.tb_parametro WHERE "idParametro" = %s
     """
     conn = get_db_connection()
-    if conn is None: return None
     try:
         with conn.cursor() as cur:
             cur.execute(sql, (param_id,))
@@ -80,30 +71,27 @@ def get_parametro_por_id_db(param_id):
             if result:
                 return {
                     "id": result[0],
-                    "nome": result[1],
-                    "fotos": result[2],
-                    "mapas": result[3],
-                    "videos_a_processar": result[4],
-                    "videos_processados": result[5],
-                    "video_marcoes": result[6],
-                    "intervalo_frames": result[7],
-                    "escala_imagem": float(result[8]) if result[8] is not None else 1.0,
-                    "modelo_deteccao": result[9],
-                    "tolerancia": result[10],
-                    "gerar_marcoes": result[11],
-                    "finalizaraoidentificartodos": result[12]
+                    "name": result[1],
+                    "photos_path": result[2],
+                    "maps_path": result[3],
+                    "videos_to_process_path": result[4],
+                    "processed_videos_path": result[5],
+                    "video_markers_path": result[6],
+                    "frame_interval": result[7],
+                    "image_scale": float(result[8]) if result[8] is not None else 1.0,
+                    "detection_model": result[9],
+                    "recognition_tolerance": result[10],
+                    "generate_markers": result[11],
+                    "finish_when_all_identified": result[12]
                 }
             return None
-    except Exception as e:
-        messagebox.showerror("Erro de Consulta", f"Erro ao buscar parâmetro ID {param_id}:\n{e}")
-        return None
     finally:
         conn.close()
 
-def salvar_parametros_db(param_data, param_id=None):
+
+def save_parameters(param_data: dict, param_id: int = None):
     """Salva um novo conjunto de parâmetros ou atualiza um existente."""
     conn = get_db_connection()
-    if conn is None: return None
 
     try:
         with conn.cursor() as cur:
@@ -118,12 +106,12 @@ def salvar_parametros_db(param_data, param_id=None):
                     WHERE "idParametro" = %s
                 """
                 params = (
-                    param_data['nome'], param_data['fotos'], param_data['mapas'],
-                    param_data['videos_a_processar'], param_data['videos_processados'],
-                    param_data['video_marcoes'], param_data['intervalo_frames'],
-                    param_data['escala_imagem'], param_data['modelo_deteccao'],
-                    param_data['tolerancia'], param_data['gerar_marcoes'],
-                    param_data['finalizaraoidentificartodos'], param_id
+                    param_data['name'], param_data['photos_path'], param_data['maps_path'],
+                    param_data['videos_to_process_path'], param_data['processed_videos_path'],
+                    param_data['video_markers_path'], param_data['frame_interval'],
+                    param_data['image_scale'], param_data['detection_model'],
+                    param_data['recognition_tolerance'], param_data['generate_markers'],
+                    param_data['finish_when_all_identified'], param_id
                 )
             else:
                 sql = """
@@ -137,34 +125,32 @@ def salvar_parametros_db(param_data, param_id=None):
                     RETURNING "idParametro"
                 """
                 params = (
-                    param_data['nome'], param_data['fotos'], param_data['mapas'],
-                    param_data['videos_a_processar'], param_data['videos_processados'],
-                    param_data['video_marcoes'], param_data['intervalo_frames'],
-                    param_data['escala_imagem'], param_data['modelo_deteccao'],
-                    param_data['tolerancia'], param_data['gerar_marcoes'],
-                    param_data['finalizaraoidentificartodos']
+                    param_data['name'], param_data['photos_path'], param_data['maps_path'],
+                    param_data['videos_to_process_path'], param_data['processed_videos_path'],
+                    param_data['video_markers_path'], param_data['frame_interval'],
+                    param_data['image_scale'], param_data['detection_model'],
+                    param_data['recognition_tolerance'], param_data['generate_markers'],
+                    param_data['finish_when_all_identified']
                 )
-            
+
             cur.execute(sql, params)
             if not param_id:
                 param_id = cur.fetchone()[0]
-        
+
         conn.commit()
         return param_id
     except Exception as e:
         conn.rollback()
         if "unique constraint" in str(e):
-            messagebox.showerror("Erro ao Salvar", f"O nome de parâmetro '{param_data['nome']}' já existe.")
-        else:
-            messagebox.showerror("Erro ao Salvar", f"Não foi possível salvar os parâmetros:\n{e}")
-        return None
+            raise Exception(f"O nome de parâmetro '{param_data['name']}' já existe.")
+        raise Exception(f"Não foi possível salvar os parâmetros: {e}")
     finally:
         conn.close()
 
-def excluir_parametro_db(param_id):
+
+def delete_parameter(param_id: int):
     """Exclui um conjunto de parâmetros do banco de dados."""
     conn = get_db_connection()
-    if conn is None: return False
     sql = 'DELETE FROM sch_supervisorio.tb_parametro WHERE "idParametro" = %s'
     try:
         with conn.cursor() as cur:
@@ -174,14 +160,13 @@ def excluir_parametro_db(param_id):
     except Exception as e:
         conn.rollback()
         if "violates foreign key constraint" in str(e):
-            messagebox.showerror("Erro ao Excluir", "Não é possível excluir este parâmetro, pois ele está sendo usado por um ou mais cenários.")
-        else:
-            messagebox.showerror("Erro ao Excluir", f"Não foi possível excluir o parâmetro:\n{e}")
-        return False
+            raise Exception("Não é possível excluir este parâmetro, pois ele está sendo usado por um ou mais cenários.")
+        raise Exception(f"Não foi possível excluir o parâmetro: {e}")
     finally:
         conn.close()
-        
-def carregar_parametros_db():
+
+
+def load_parameters():
     """Carrega a primeira linha de parâmetros do banco de dados (usado na inicialização)."""
     sql = """
         SELECT "idParametro", nomeparametro, "caminhoFotosClientes", "caminhoMapas",
@@ -192,36 +177,29 @@ def carregar_parametros_db():
         FROM sch_supervisorio.tb_parametro LIMIT 1
     """
     conn = get_db_connection()
-    if conn is None: 
-        return None
-    
-    parametros = None
+
     try:
         with conn.cursor() as cur:
             cur.execute(sql)
             result = cur.fetchone()
             if result:
-                parametros = {
+                return {
                     "id": result[0],
-                    "nome": result[1],
-                    "fotos": result[2],
-                    "mapas": result[3],
-                    "videos_a_processar": result[4],
-                    "videos_processados": result[5],
-                    "video_marcoes": result[6],
-                    "intervalo_frames": result[7],
-                    "escala_imagem": float(result[8]) if result[8] is not None else 1.0,
-                    "modelo_deteccao": result[9],
-                    "tolerancia": result[10],
-                    "gerar_marcoes": result[11],
-                    "finalizaraoidentificartodos": result[12]
+                    "name": result[1],
+                    "photos_path": result[2],
+                    "maps_path": result[3],
+                    "videos_to_process_path": result[4],
+                    "processed_videos_path": result[5],
+                    "video_markers_path": result[6],
+                    "frame_interval": result[7],
+                    "image_scale": float(result[8]) if result[8] is not None else 1.0,
+                    "detection_model": result[9],
+                    "recognition_tolerance": result[10],
+                    "generate_markers": result[11],
+                    "finish_when_all_identified": result[12]
                 }
+            return None
     except Exception as e:
-        messagebox.showerror("Erro de Consulta", f"Erro ao carregar parâmetros:\n{e}\n\nCertifique-se que a 'tb_parametro' foi atualizada com TODOS os campos.")
+        raise Exception(f"Erro ao carregar parâmetros: {e}")
     finally:
         conn.close()
-    
-    if parametros is None:
-        messagebox.showerror("Erro Crítico", "Não foi possível carregar os parâmetros de configuração do banco.")
-        
-    return parametros

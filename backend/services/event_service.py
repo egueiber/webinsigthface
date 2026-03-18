@@ -4,10 +4,10 @@ Módulo de Serviço de Evento (Backend)
 
 Centraliza a lógica de negócio para o cadastro de eventos.
 """
-from .database_service import get_db_connection
-from tkinter import messagebox
+from backend.services.database_service import get_db_connection
 
-def listar_eventos_db(filtro_nome=""):
+
+def list_events(name_filter: str = ""):
     sql = """
         SELECT idevento, nomeevento, eventoduracao
         FROM sch_supervisorio.tb_evento
@@ -15,53 +15,48 @@ def listar_eventos_db(filtro_nome=""):
         ORDER BY nomeevento
     """
     conn = get_db_connection()
-    if conn is None: return []
-    resultados = []
+    results = []
     try:
         with conn.cursor() as cur:
-            cur.execute(sql, (f"%{filtro_nome}%",))
-            resultados = cur.fetchall()
-    except Exception as e:
-        messagebox.showerror("Erro de Consulta", f"Erro ao listar eventos:\n{e}")
+            cur.execute(sql, (f"%{name_filter}%",))
+            results = cur.fetchall()
     finally:
         conn.close()
-    return resultados
+    return results
 
-def get_evento_por_id_db(evento_id):
+
+def get_event_by_id(event_id: int):
     sql = 'SELECT nomeevento, eventoduracao FROM sch_supervisorio.tb_evento WHERE idevento = %s'
     conn = get_db_connection()
-    if conn is None: return None
-    evento = None
+    event = None
     try:
         with conn.cursor() as cur:
-            cur.execute(sql, (evento_id,))
+            cur.execute(sql, (event_id,))
             result = cur.fetchone()
             if result:
-                evento = {"nome": result[0], "duracao": result[1]}
-    except Exception as e:
-        messagebox.showerror("Erro de Consulta", f"Erro ao buscar evento ID {evento_id}:\n{e}")
+                event = {"name": result[0], "duration": result[1]}
     finally:
         conn.close()
-    return evento
+    return event
 
-def salvar_evento_no_banco(nome, duracao, evento_id=None):
+
+def save_event(name: str, duration: int, event_id: int = None):
     conn = get_db_connection()
-    if conn is None: return False
     try:
-        if evento_id:
+        if event_id:
             sql = """
                 UPDATE sch_supervisorio.tb_evento
                 SET nomeevento = %s, eventoduracao = %s
                 WHERE idevento = %s
             """
-            params = (nome, duracao, evento_id)
+            params = (name, duration, event_id)
         else:
             sql = """
                 INSERT INTO sch_supervisorio.tb_evento
                 (nomeevento, eventoduracao)
                 VALUES (%s, %s)
             """
-            params = (nome, duracao)
+            params = (name, duration)
         with conn.cursor() as cur:
             cur.execute(sql, params)
         conn.commit()
@@ -69,25 +64,22 @@ def salvar_evento_no_banco(nome, duracao, evento_id=None):
     except Exception as e:
         conn.rollback()
         if "unique constraint" in str(e):
-             messagebox.showerror("Erro ao Salvar", f"Não foi possível salvar: O evento '{nome}' já está cadastrado.")
-        else:
-             messagebox.showerror("Erro ao Salvar", f"Não foi possível salvar os dados no banco:\n{e}")
-        return False
+            raise Exception(f"O evento '{name}' já está cadastrado.")
+        raise Exception(f"Não foi possível salvar os dados no banco: {e}")
     finally:
         conn.close()
 
-def excluir_evento_db(evento_id):
+
+def delete_event(event_id: int):
     conn = get_db_connection()
-    if conn is None: return False
     sql = 'DELETE FROM sch_supervisorio.tb_evento WHERE idevento = %s'
     try:
         with conn.cursor() as cur:
-            cur.execute(sql, (evento_id,))
+            cur.execute(sql, (event_id,))
         conn.commit()
         return True
     except Exception as e:
         conn.rollback()
-        messagebox.showerror("Erro ao Excluir", f"Não foi possível excluir o evento:\n{e}")
-        return False
+        raise Exception(f"Não foi possível excluir o evento: {e}")
     finally:
         conn.close()
