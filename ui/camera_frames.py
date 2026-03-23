@@ -11,13 +11,13 @@ import shutil
 from PIL import Image, ImageTk
 
 # (NOVO) Imports dos nossos módulos de "Backend"
-from services.database_service import (
-    listar_cameras_db, 
-    get_camera_por_id_db, 
-    salvar_camera_no_banco, 
-    excluir_camera_db
+from backend.services.database_service import (
+    list_cameras, 
+    get_camera_by_id, 
+    save_camera, 
+    delete_camera
 )
-from services.localizacao_service import listar_localizacoes_db
+from backend.services.location_service import list_locations
 
 
 # --- Módulo 2A: Lista de Câmeras ---
@@ -73,7 +73,7 @@ class ListarCamerasFrame(ttk.Frame):
         for i in self.tree.get_children():
             self.tree.delete(i)
         filtro = self.search_entry.get()
-        cameras = listar_cameras_db(filtro) # (MODIFICADO) Chama o serviço
+        cameras = list_cameras(filtro) # (MODIFICADO) Chama o serviço
         for camera in cameras:
             self.tree.insert("", "end", values=camera)
 
@@ -100,7 +100,7 @@ class ListarCamerasFrame(ttk.Frame):
         if not messagebox.askyesno("Confirmar Exclusão", f"Tem certeza que deseja excluir a câmera '{nome}' (ID: {camera_id})?"):
             return
         
-        success = excluir_camera_db(camera_id) # (MODIFICADO) Chama o serviço
+        success = delete_camera(camera_id) # (MODIFICADO) Chama o serviço
         if success:
             temporary_message(self.controller, "Sucesso", f"Câmera '{nome}' foi excluída com sucesso.")
             self.popular_lista() 
@@ -169,7 +169,7 @@ class CadastroCamerasFrame(ttk.Frame):
         
         # Carrega e popula as localizações
         try:
-            loc_data = listar_localizacoes_db()
+            loc_data = list_locations()
             self.localizacoes = {loc[1]: loc[0] for loc in loc_data} # Nome -> ID
             self.loc_combobox['values'] = list(self.localizacoes.keys())
         except Exception as e:
@@ -186,7 +186,7 @@ class CadastroCamerasFrame(ttk.Frame):
         else:
             self.titulo_label.config(text="Editar Câmera")
             self.btn_salvar.config(text="Salvar Alterações")
-            camera_data = get_camera_por_id_db(self.camera_id_atual)
+            camera_data = get_camera_by_id(self.camera_id_atual)
             
             if camera_data:
                 self.nome_entry.insert(0, camera_data["nome"])
@@ -231,7 +231,7 @@ class CadastroCamerasFrame(ttk.Frame):
             messagebox.showerror("Erro de Validação", f"Os campos de nota devem ser números entre 0.0 e 1.0. Os campos 'Andar' e 'Nº Sala Próxima' devem ser números inteiros.\n\nDetalhe: {e}")
             return
             
-        success = salvar_camera_no_banco(
+        success = save_camera(
             nome, idlocalizacao, 
             andar, nrsala, notaparaignorar, notaidentificacao, self.camera_id_atual
         )

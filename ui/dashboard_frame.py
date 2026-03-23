@@ -11,7 +11,7 @@ from tkcalendar import DateEntry
 from datetime import date, timedelta
 
 # Importa os serviços do backend
-from services import dashboard_service
+from backend.services import dashboard_service
 
 class DashboardFrame(ttk.Frame):
     def __init__(self, parent, controller):

@@ -11,7 +11,7 @@ from datetime import date
 from tkcalendar import DateEntry
 
 # (NOVO) Imports dos nossos módulos de "Backend"
-from services.database_service import get_localizacoes_db, get_dados_acompanhamento_db
+from backend.services.database_service import get_all_locations, get_tracking_data
 from .widgets import Tooltip
 from .video_player import VideoPlayerWindow
 
@@ -95,7 +95,7 @@ class AcompanhamentoAreaFrame(ttk.Frame):
 
     def carregar_localizacoes(self):
         """Busca localizações do DB e preenche o combobox."""
-        self.localizacoes_mapas = get_localizacoes_db() 
+        self.localizacoes_mapas = get_all_locations()
         loc_nomes = list(self.localizacoes_mapas.keys())
         self.loc_combobox['values'] = loc_nomes
         if loc_nomes:
@@ -174,7 +174,7 @@ class AcompanhamentoAreaFrame(ttk.Frame):
             self.map_canvas.create_text(10, 10, anchor='nw', text=f"Mapa não encontrado para '{loc_nome_selecionada}'\nCaminho: {mapa_path}", fill="red")
 
         # 2. Buscar Dados de Acompanhamento
-        dados = get_dados_acompanhamento_db(loc_id, data_str)
+        dados = get_tracking_data(loc_id, data_str)
         if not dados:
             if mapa_path and os.path.exists(mapa_path): 
                 messagebox.showinfo("Sem Resultados", f"Nenhum registro encontrado para '{loc_nome_selecionada}' na data '{data_str}'.")

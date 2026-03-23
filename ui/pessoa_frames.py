@@ -14,14 +14,14 @@ import shutil
 from PIL import Image, ImageTk
 
 # (NOVO) Imports dos nossos módulos de "Backend"
-from services.database_service import (
-    listar_pessoas_db, 
-    get_pessoa_por_id_db, 
-    salvar_pessoa_no_banco, 
-    excluir_pessoa_db,
+from backend.services.database_service import (
+    list_persons, 
+    get_person_by_id, 
+    save_person, 
+    delete_person,
     get_db_connection
 )
-from services.facial_service import gerar_aumentos_de_dados, PADDING_PIXELS
+from backend.services.facial_service import generate_data_augmentations, PADDING_PIXELS
 
 
 # --- Módulo 1A: Lista de Pessoas ---
@@ -79,7 +79,7 @@ class ListarPessoasFrame(ttk.Frame):
         for i in self.tree.get_children():
             self.tree.delete(i)
         filtro = self.search_entry.get()
-        pessoas = listar_pessoas_db(filtro) # (MODIFICADO) Chama o serviço
+        pessoas = list_persons(filtro) # (MODIFICADO) Chama o serviço
         for pessoa in pessoas:
             self.tree.insert("", "end", values=pessoa)
 
@@ -133,7 +133,7 @@ class ListarPessoasFrame(ttk.Frame):
             if base_path_fotos:
                  caminho_completo_para_excluir = os.path.join(base_path_fotos, nome_pasta_fotos)
             
-        success = excluir_pessoa_db(pessoa_id, caminho_completo_para_excluir) # (MODIFICADO) Chama o serviço
+        success = delete_person(pessoa_id, caminho_completo_para_excluir) # (MODIFICADO) Chama o serviço
         
         if success:
             temporary_message(self.controller, "Sucesso", f"'{nome}' foi excluído com sucesso.")
@@ -209,7 +209,7 @@ class CadastroFacialFrame(ttk.Frame):
             self.capturando = False
         else:
             self.titulo_label.config(text="Editar Pessoa")
-            pessoa_data = get_pessoa_por_id_db(pessoa_id) # (MODIFICADO) Chama o serviço
+            pessoa_data = get_person_by_id(pessoa_id) # (MODIFICADO) Chama o serviço
             if pessoa_data:
                 self.nome_entry.insert(0, pessoa_data["nome"])
                 self.id_entry.insert(0, pessoa_data["documento"])
@@ -337,11 +337,11 @@ class CadastroFacialFrame(ttk.Frame):
         self.instrucao_label.config(text=f"Passo {self.current_pose_index + 1}/{len(self.poses)}: Peça para a pessoa estar na pose '{pose_instrucao.upper()}'")
 
     def finalizar_cadastro(self):
-        gerar_aumentos_de_dados(self.caminho_pasta) # (MODIFICADO) Chama o serviço
+        generate_data_augmentations(self.caminho_pasta) # (MODIFICADO) Chama o serviço
         nome_final = self.nome_entry.get().strip()
         id_final = self.id_entry.get().strip()
         
-        success = salvar_pessoa_no_banco(nome_final, id_final, self.nome_pasta, self.pessoa_id_atual) # (MODIFICADO) Chama o serviço
+        success = save_person(nome_final, id_final, self.nome_pasta, self.pessoa_id_atual) # (MODIFICADO) Chama o serviço
         
         if success:
             temporary_message(self.controller, "Cadastro Concluído", f"Cadastro de '{nome_final}' salvo com sucesso!\n\nDados salvos no banco e fotos salvas em:\n{self.caminho_pasta}")

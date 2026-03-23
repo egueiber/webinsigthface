@@ -21,7 +21,7 @@ except ImportError:
     print("Execute 'pip install sv-ttk' para um visual moderno.")
 
 # (NOVO) Importa os serviços de backend
-from services.config_service import carregar_parametros_db
+from backend.services.config_service import initialize_db_parameters
 
 # (NOVO) Importa os frames (telas)
 from .dashboard_frame import DashboardFrame
@@ -53,7 +53,7 @@ class AppPrincipal(tk.Tk):
             style.configure("Secondary.TLabel", foreground="gray")
             style.configure("Card.TLabel", relief="solid", borderwidth=1)
         
-        self.parametros = carregar_parametros_db()
+        self.parametros = initialize_db_parameters()
         if self.parametros is None:
             messagebox.showerror("Erro Fatal", "Aplicação não pode iniciar sem parâmetros válidos.")
             self.destroy()
@@ -150,7 +150,7 @@ class AppPrincipal(tk.Tk):
 
     def recarregar_parametros(self):
         """Recarrega os parâmetros do DB e atualiza o estado global."""
-        self.parametros = carregar_parametros_db()
+        self.parametros = initialize_db_parameters()
         self.title(f"Health Track Unimed - UEPG: {self.parametros.get('fotos')})")
         print("[TEMP] Parâmetros globais recarregados.")
         

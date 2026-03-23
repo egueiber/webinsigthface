@@ -9,15 +9,15 @@ from datetime import datetime, timedelta
 from .widgets import temporary_message
 
 # Imports dos nossos módulos de "Backend"
-from services.database_service import (
-    listar_eventos_por_pessoa_db,
-    get_pessoa_evento_por_id_db,
-    salvar_pessoa_evento_no_banco,
-    excluir_pessoa_evento_db,
-    listar_eventos_db, # para o combobox
-    get_pessoa_por_id_db # para exibir o nome da pessoa
+from backend.services.database_service import (
+    list_events_by_person,
+    get_person_event_by_id,
+    save_person_event,
+    delete_person_event,
+    list_events,
+    get_person_by_id
 )
-from services.evento_service import get_evento_por_id_db
+from backend.services.event_service import get_event_by_id
 
 
 # --- Módulo: Lista de Eventos da Pessoa ---
@@ -76,7 +76,7 @@ class ListarPessoaEventosFrame(ttk.Frame):
         for i in self.tree.get_children():
             self.tree.delete(i)
         if self.pessoa_id:
-            eventos = listar_eventos_por_pessoa_db(self.pessoa_id)
+            eventos = list_events_by_person(self.pessoa_id)
             for evento in eventos:
                 # evento is a tuple: (id, evento, entrada, saida_prevista, saida_efetiva, cancelado)
                 formatted_evento = list(evento)
@@ -109,7 +109,7 @@ class ListarPessoaEventosFrame(ttk.Frame):
         if not messagebox.askyesno("Confirmar Exclusão", f"Tem certeza que deseja excluir o evento '{nome_evento}' desta pessoa?"):
             return
 
-        success = excluir_pessoa_evento_db(pessoa_evento_id)
+        success = delete_person_event(pessoa_evento_id)
 
         if success:
             temporary_message(self.controller, "Sucesso", f"Evento '{nome_evento}' foi removido com sucesso.")
@@ -117,7 +117,7 @@ class ListarPessoaEventosFrame(ttk.Frame):
 
     def on_show(self, pessoa_id):
         self.pessoa_id = pessoa_id
-        pessoa = get_pessoa_por_id_db(self.pessoa_id)
+        pessoa = get_person_by_id(self.pessoa_id)
         if pessoa:
             self.label_titulo.config(text=f"Eventos de: {pessoa['nome']}")
         else:
@@ -180,7 +180,7 @@ class CadastroPessoaEventoFrame(ttk.Frame):
                 return
             idevento = self.eventos_map[nome_evento]
             
-            evento_data = get_evento_por_id_db(idevento)
+            evento_data = get_event_by_id(idevento)
             
             if evento_data and evento_data.get("duracao") is not None and evento_data["duracao"] > 0:
                 duracao_minutos = evento_data["duracao"]
@@ -211,11 +211,11 @@ class CadastroPessoaEventoFrame(ttk.Frame):
         self.pessoa_id = pessoa_id
         self.pessoa_evento_id_atual = pessoa_evento_id
 
-        pessoa = get_pessoa_por_id_db(self.pessoa_id)
+        pessoa = get_person_by_id(self.pessoa_id)
         pessoa_nome = pessoa['nome'] if pessoa else ""
 
         # Carregar eventos no combobox
-        eventos = listar_eventos_db()
+        eventos = list_events()
         self.eventos_map = {evento[1]: evento[0] for evento in eventos}
         self.evento_combo['values'] = list(self.eventos_map.keys())
 
@@ -231,7 +231,7 @@ class CadastroPessoaEventoFrame(ttk.Frame):
             self.entrada_entry.insert(0, now)
         else:
             self.titulo_label.config(text=f"Editar Evento de: {pessoa_nome}")
-            pessoa_evento_data = get_pessoa_evento_por_id_db(pessoa_evento_id)
+            pessoa_evento_data = get_person_event_by_id(pessoa_evento_id)
             if pessoa_evento_data:
                 idevento = pessoa_evento_data["idevento"]
                 for nome, id_ in self.eventos_map.items():
@@ -279,7 +279,7 @@ class CadastroPessoaEventoFrame(ttk.Frame):
 
         cancelado = self.cancelado_var.get()
 
-        success = salvar_pessoa_evento_no_banco(
+        success = save_person_event(
             self.pessoa_id, idevento, entrada, saida_prev, saida_efet, cancelado, self.pessoa_evento_id_atual
         )
 

@@ -7,16 +7,16 @@ from tkinter import ttk
 from tkinter import messagebox
 from .widgets import temporary_message
 
-from services.cenario_service import (
-    listar_cenarios_db,
-    get_cenario_por_id_db,
-    salvar_cenario_no_banco,
-    excluir_cenario_db,
-    get_cameras_para_cenario_db,
-    adicionar_camera_cenario_db,
-    remover_camera_cenario_db,
-    listar_cameras_disponiveis_db,
-    listar_parametros_disponiveis_db
+from backend.services.scenario_service import (
+    list_scenarios,
+    get_scenario_by_id,
+    save_scenario,
+    delete_scenario,
+    get_cameras_for_scenario,
+    add_camera_to_scenario,
+    remove_camera_from_scenario,
+    list_available_cameras,
+    list_available_parameters
 )
 
 class ListarCenariosFrame(ttk.Frame):
@@ -75,7 +75,7 @@ class ListarCenariosFrame(ttk.Frame):
         for i in self.tree.get_children():
             self.tree.delete(i)
         filtro = self.search_entry.get()
-        cenarios = listar_cenarios_db(filtro)
+        cenarios = list_scenarios(filtro)
         for cenario in cenarios:
             self.tree.insert("", "end", values=cenario)
 
@@ -102,7 +102,7 @@ class ListarCenariosFrame(ttk.Frame):
         if not messagebox.askyesno("Confirmar Exclusão", f"Tem certeza que deseja excluir o cenário '{descricao}' (ID: {cenario_id})?"):
             return
 
-        success = excluir_cenario_db(cenario_id)
+        success = delete_scenario(cenario_id)
         if success:
             temporary_message(self.controller, "Sucesso", f"Cenário '{descricao}' foi excluído com sucesso.")
             self.popular_lista()
@@ -191,7 +191,7 @@ class CadastroCenarioFrame(ttk.Frame):
             self.titulo_label.config(text="Novo Cenário")
         else:
             self.titulo_label.config(text="Editar Cenário")
-            cenario_data = get_cenario_por_id_db(cenario_id)
+            cenario_data = get_scenario_by_id(cenario_id)
             if cenario_data:
                 self.descricao_entry.insert(0, cenario_data["descricao"])
                 self.ativo_var.set(cenario_data["ativo"])
@@ -208,17 +208,17 @@ class CadastroCenarioFrame(ttk.Frame):
 
     def popular_combos(self):
         # Parâmetros
-        self.parametros_list = listar_parametros_disponiveis_db()
+        self.parametros_list = list_available_parameters()
         self.parametro_combo['values'] = [p[1] for p in self.parametros_list]
         
         # Câmeras
-        self.cameras_list = listar_cameras_disponiveis_db()
+        self.cameras_list = list_available_cameras()
         self.camera_combo['values'] = [c[1] for c in self.cameras_list]
 
     def popular_lista_cameras(self):
         self.limpar_lista_cameras()
         if self.cenario_id_atual:
-            cameras = get_cameras_para_cenario_db(self.cenario_id_atual)
+            cameras = get_cameras_for_scenario(self.cenario_id_atual)
             for cam in cameras:
                 self.tree_cameras.insert("", "end", values=cam)
 
@@ -238,7 +238,7 @@ class CadastroCenarioFrame(ttk.Frame):
         
         camera_id = self.cameras_list[idx_camera][0]
         
-        success = adicionar_camera_cenario_db(self.cenario_id_atual, camera_id)
+        success = add_camera_to_scenario(self.cenario_id_atual, camera_id)
         if success:
             self.popular_lista_cameras()
             self.camera_combo.set('')
@@ -252,7 +252,7 @@ class CadastroCenarioFrame(ttk.Frame):
         item = self.tree_cameras.item(selecionado)
         idcenariocamera = item['values'][0]
         
-        success = remover_camera_cenario_db(idcenariocamera)
+        success = remove_camera_from_scenario(idcenariocamera)
         if success:
             self.popular_lista_cameras()
 
@@ -271,7 +271,7 @@ class CadastroCenarioFrame(ttk.Frame):
         ativo = self.ativo_var.get()
         padrao = self.padrao_var.get()
 
-        novo_cenario_id = salvar_cenario_no_banco(descricao, parametro_id, ativo, padrao, self.cenario_id_atual)
+        novo_cenario_id = save_scenario(descricao, parametro_id, ativo, padrao, self.cenario_id_atual)
 
         if novo_cenario_id:
             if not self.cenario_id_atual: # Se era um novo cenário

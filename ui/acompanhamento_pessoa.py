@@ -16,8 +16,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import os
 
 # (NOVO) Imports dos nossos módulos de "Backend"
-from services.database_service import get_pessoas_por_periodo_db, get_caminho_pessoa_db, get_all_localizacoes_db
-from services.graph_service import criar_figura_grafo
+from backend.services.database_service import get_persons_by_period, get_person_path, get_all_locations
+from backend.services.graph_service import criar_figura_grafo
 from .video_player import VideoPlayerWindow
 
 
@@ -152,7 +152,7 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
 
     def carregar_localizacoes(self):
         """Busca localizações do DB e preenche o combobox."""
-        locs = get_all_localizacoes_db()
+        locs = get_all_locations()
         # Adiciona a opção "Todas" no início
         self.localizacoes = {"Todas": None}
         for loc_id, loc_nome in locs:
@@ -200,7 +200,7 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
         loc_id = self.localizacoes.get(loc_nome)
 
         somente_com_atraso = self.somente_com_atraso_var.get()
-        pessoas = get_pessoas_por_periodo_db(data_inicio, data_fim, somente_com_atraso, loc_id)
+        pessoas = get_persons_by_period(data_inicio, data_fim, somente_com_atraso, loc_id)
         if not pessoas:
             messagebox.showinfo("Sem Resultados", "Nenhuma pessoa encontrada com os filtros selecionados.")
             self.pessoa_combobox['values'] = []
@@ -225,7 +225,7 @@ class AcompanhamentoPessoaFrame(ttk.Frame):
         data_inicio_str = data_inicio.strftime("%d/%m/%Y")
         data_fim_str = data_fim.strftime("%d/%m/%Y")
             
-        caminho_data = get_caminho_pessoa_db(nome_pessoa, data_inicio, data_fim, self.identificada_var.get())
+        caminho_data = get_person_path(nome_pessoa, data_inicio, data_fim, self.identificada_var.get())
         
         if not caminho_data:
             messagebox.showinfo("Sem Dados", f"Nenhum dado de caminhamento encontrado para '{nome_pessoa}' neste período.")

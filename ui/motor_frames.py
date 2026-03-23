@@ -7,11 +7,11 @@ from tkinter import ttk, messagebox
 from .widgets import temporary_message
 import json
 
-from services.database_service import (
-    listar_motores_db,
-    get_motor_por_id_db,
-    salvar_motor_no_banco,
-    excluir_motor_db
+from backend.services.database_service import (
+    list_engines,
+    get_engine_by_id,
+    save_engine,
+    delete_engine
 )
 
 class ListarMotoresFrame(ttk.Frame):
@@ -70,7 +70,7 @@ class ListarMotoresFrame(ttk.Frame):
         for i in self.tree.get_children():
             self.tree.delete(i)
         filtro = self.search_entry.get()
-        motores = listar_motores_db(filtro)
+        motores = list_engines(filtro)
         for motor in motores:
             self.tree.insert("", "end", values=motor)
 
@@ -100,7 +100,7 @@ class ListarMotoresFrame(ttk.Frame):
         if not messagebox.askyesno("Confirmar Exclusão", f"Tem certeza que deseja excluir o motor '{nome}' (ID: {motor_id})?"):
             return
         
-        success = excluir_motor_db(motor_id)
+        success = delete_engine(motor_id)
         if success:
             temporary_message(self.controller, "Sucesso", f"Motor '{nome}' foi excluído com sucesso.")
             self.popular_lista()
@@ -176,7 +176,7 @@ class CadastroMotorFrame(ttk.Frame):
         else:
             self.titulo_label.config(text="Editar Motor")
             self.btn_salvar.config(text="Salvar Alterações")
-            motor_data = get_motor_por_id_db(self.motor_id_atual)
+            motor_data = get_engine_by_id(self.motor_id_atual)
 
             if motor_data:
                 # Garante que os valores inseridos no Entry sejam strings
@@ -224,7 +224,7 @@ class CadastroMotorFrame(ttk.Frame):
         ativo = self.ativo_var.get()
         padrao = self.padrao_var.get()
 
-        success = salvar_motor_no_banco(
+        success = save_engine(
             nome, versao, funcao, metodo, json_interno, arquivo_externo, ativo, padrao, self.motor_id_atual
         )
 

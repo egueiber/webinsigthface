@@ -5,11 +5,11 @@ Módulo das Telas de Parâmetros (Frontend)
 import tkinter as tk
 from tkinter import ttk, messagebox
 from .widgets import temporary_message
-from services.config_service import (
-    listar_parametros_db,
-    get_parametro_por_id_db,
-    salvar_parametros_db,
-    excluir_parametro_db
+from backend.services.config_service import (
+    list_parameters,
+    get_parameter_by_id,
+    save_parameters,
+    delete_parameter
 )
 
 class ListarParametrosFrame(ttk.Frame):
@@ -62,7 +62,7 @@ class ListarParametrosFrame(ttk.Frame):
         for i in self.tree.get_children():
             self.tree.delete(i)
         filtro = self.search_entry.get()
-        parametros = listar_parametros_db(filtro)
+        parametros = list_parameters(filtro)
         for param in parametros:
             # Invertendo a ordem para (nome, id)
             self.tree.insert("", "end", values=(param[1], param[0]))
@@ -90,7 +90,7 @@ class ListarParametrosFrame(ttk.Frame):
         if not messagebox.askyesno("Confirmar Exclusão", f"Tem certeza que deseja excluir o parâmetro '{nome}' (ID: {param_id})?"):
             return
 
-        if excluir_parametro_db(param_id):
+        if delete_parameter(param_id):
             temporary_message(self.controller, "Sucesso", f"Parâmetro '{nome}' foi excluído.")
             self.popular_lista()
 
@@ -184,7 +184,7 @@ class CadastroParametroFrame(ttk.Frame):
             self.var_finalizaraoidentificartodos.set(False)
         else:
             self.titulo_label.config(text="Editar Parâmetro")
-            params = get_parametro_por_id_db(param_id)
+            params = get_parameter_by_id(param_id)
             if params:
                 self.nome_entry.insert(0, params.get("nome", ""))
                 self.fotos_entry.insert(0, params.get("fotos", ""))
@@ -240,7 +240,7 @@ class CadastroParametroFrame(ttk.Frame):
             messagebox.showwarning("Dados Incompletos", "Todos os campos de texto/caminho são obrigatórios.")
             return
 
-        novo_id = salvar_parametros_db(param_data, self.param_id_atual)
+        novo_id = save_parameters(param_data, self.param_id_atual)
         
         if novo_id:
             # Se for um novo parâmetro, o ID global de parâmetros da aplicação
