@@ -1,0 +1,37 @@
+# Backend FastAPI — Health Track
+FROM python:3.9-slim
+
+# Dependências de sistema para face_recognition / dlib / opencv / psycopg2
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    libpq-dev \
+    libopenblas-dev \
+    liblapack-dev \
+    libx11-dev \
+    libboost-python-dev \
+    libboost-thread-dev \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copia requirements e remove pacotes incompatíveis com Linux
+COPY requirements.txt .
+RUN grep -v "dlib @ file:///" requirements.txt \
+  | grep -v "tensorflow-intel" \
+  | grep -v "tensorflow-io-gcs-filesystem" \
+  | grep -v "tkcalendar" \
+  | grep -v "sv.ttk" \
+  | grep -v "sv_ttk" \
+  > requirements_docker.txt
+
+# Instala dlib via pip (compila no Linux sem problemas)
+RUN pip install --no-cache-dir dlib
+RUN pip install --no-cache-dir -r requirements_docker.txt
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

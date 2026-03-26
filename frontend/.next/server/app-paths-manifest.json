@@ -1,0 +1,8 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/pessoas/page": "app/pessoas/page.js",
+  "/localizacoes/page": "app/localizacoes/page.js",
+  "/parametros/[id]/page": "app/parametros/[id]/page.js",
+  "/acompanhamento-area/page": "app/acompanhamento-area/page.js",
+  "/pessoas/[id]/page": "app/pessoas/[id]/page.js"
+}

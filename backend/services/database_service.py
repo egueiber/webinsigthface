@@ -12,22 +12,13 @@ import shutil
 
 # --- Configuração do Banco de Dados ---
 # Alterne para True para usar o banco de dados do Docker Compose
-DOCKER_DB = True
+import os
 
-if DOCKER_DB:
-    # Configurações para o banco de dados no contêiner Docker
-    DB_NAME = "health-track-supervisorio"
-    DB_USER = "postgres"
-    DB_PASS = "123456"
-    DB_HOST = "localhost"
-    DB_PORT = 5432
-else:
-    # Configurações originais
-    DB_NAME = "postgres"
-    DB_USER = "supervisorio"
-    DB_PASS = "supervisorio101"
-    DB_HOST = "localhost"
-    DB_PORT = 5432
+DB_NAME = os.getenv("DB_NAME", "health-track-supervisorio")
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASS = os.getenv("DB_PASS", "123456")
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT  = int(os.getenv("DB_PORT", "5432"))
 
 
 # --- Conexão ---

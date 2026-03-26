@@ -1,0 +1,51 @@
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    container_name: healthtrack-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: health-track-supervisorio
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "123456"
+    ports:
+      - "5432:5432"          # acessível em localhost:5432 na sua máquina
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/scriptBancoDados.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend FastAPI ─────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: healthtrack-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"          # frontend local acessa http://localhost:8000
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: health-track-supervisorio
+      DB_USER: postgres
+      DB_PASS: "123456"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - healthtrack_fotos:/app/data/fotos
+      - healthtrack_mapas:/app/data/mapas
+      - healthtrack_videos:/app/data/videos
+
+volumes:
+  postgres_data:
+  healthtrack_fotos:
+  healthtrack_mapas:
+  healthtrack_videos:
