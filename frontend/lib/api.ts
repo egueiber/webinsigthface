@@ -85,3 +85,38 @@ export const getDashboardIndicators = (params: { data_inicio: string; data_fim: 
   request<any>(`/dashboard/indicators${qs({ start_date: params.data_inicio, end_date: params.data_fim, location_id: params.localizacao_id })}`);
 export const getDelayedPersons = (params: { data_inicio: string; data_fim: string; localizacao_id?: string }) =>
   request<any[]>(`/dashboard/delayed-persons${qs({ start_date: params.data_inicio, end_date: params.data_fim, location_id: params.localizacao_id })}`);
+
+// Adicione estas funções no FINAL do arquivo frontend/lib/api.ts
+
+// ── Câmeras ───────────────────────────────────────────────────────────────────
+export const getCameras   = (filter = "") => request<any[]>(`/cameras/${qs({ filter })}`);
+export const getCamera    = (id: number)  => request<any>(`/cameras/${id}`);
+export const createCamera = (data: {
+  nome: string; idlocalizacao: number; andar?: number;
+  nrsalaproxima?: number; notaparaignorar?: number; notaidentificacao?: number;
+}) =>
+  request<any>(`/cameras/${qs({
+    name: data.nome, location_id: data.idlocalizacao,
+    floor: data.andar ?? 0, room_number: data.nrsalaproxima ?? 0,
+    ignore_threshold: data.notaparaignorar ?? 0.7,
+    identification_threshold: data.notaidentificacao ?? 0.7,
+  })}`, { method: "POST" });
+export const updateCamera = (id: number, data: {
+  nome: string; idlocalizacao: number; andar?: number;
+  nrsalaproxima?: number; notaparaignorar?: number; notaidentificacao?: number;
+}) =>
+  request<any>(`/cameras/${id}${qs({
+    name: data.nome, location_id: data.idlocalizacao,
+    floor: data.andar ?? 0, room_number: data.nrsalaproxima ?? 0,
+    ignore_threshold: data.notaparaignorar ?? 0.7,
+    identification_threshold: data.notaidentificacao ?? 0.7,
+  })}`, { method: "PUT" });
+export const deleteCamera = (id: number) => request<any>(`/cameras/${id}`, { method: "DELETE" });
+
+// ── Tracking / Acompanhamento ─────────────────────────────────────────────────
+export const getAreaTracking = (location_id: number, date_filter: string) =>
+  request<any[]>(`/tracking/area${qs({ location_id, date_filter })}`);
+
+export const getPersonPath = (person_id: number, start_date: string, end_date: string, identified_only = true) =>
+  request<any[]>(`/tracking/person-path${qs({ person_id, start_date, end_date, identified_only })}`);
+

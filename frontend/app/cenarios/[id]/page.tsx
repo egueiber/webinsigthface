@@ -13,6 +13,12 @@ import { ArrowLeft, Save, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
+// Backend retorna tuplas: [idParametro, nomeparametro]
+function parseParam(p: any) {
+  if (Array.isArray(p)) return { id: p[0], nome: p[1] };
+  return { id: p.idParametro ?? p.id, nome: p.nomeparametro ?? p.nome ?? p.name };
+}
+
 export default function CenarioFormPage() {
   const router = useRouter();
   const params = useParams();
@@ -28,14 +34,17 @@ export default function CenarioFormPage() {
   const [error,       setError]       = useState("");
 
   useEffect(() => {
-    getParametros().then(setParametros).catch(() => {});
+    getParametros()
+      .then(ps => setParametros(ps.map(parseParam)))
+      .catch(() => {});
+
     if (!isNew) {
       getCenario(Number(id)).then(data => {
-        setDescricao(data.descricao ?? "");
-        setParametroId(String(data.idparametro ?? ""));
-        setAtivo(data.ativo ?? true);
-        setPadrao(data.padrao ?? false);
-      }).catch(e => setError(e.message));
+        setDescricao(data.descricao ?? data.descricaocenario ?? data.description ?? "");
+        setParametroId(String(data.idparametro ?? data.parameter_id ?? ""));
+        setAtivo(data.ativo ?? data.active ?? true);
+        setPadrao(data.padrao ?? data.default ?? false);
+      }).catch(e => setError(String(e.message ?? e)));
     }
   }, [id]);
 
@@ -49,7 +58,7 @@ export default function CenarioFormPage() {
       else await updateCenario(Number(id), payload);
       toast.success("Cenário salvo com sucesso!");
       router.push("/cenarios");
-    } catch (e: any) { setError(e.message); }
+    } catch (e: any) { setError(String(e.message ?? e)); }
     finally { setLoading(false); }
   }
 
@@ -71,19 +80,17 @@ export default function CenarioFormPage() {
             <Label>Descrição <span className="text-red-500">*</span></Label>
             <Input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Ex: Cenário Principal" />
           </div>
-
           <div className="space-y-1.5">
             <Label>Parâmetro <span className="text-red-500">*</span></Label>
             <Select value={parametroId} onValueChange={setParametroId}>
               <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>
-                {parametros.map((p: any) => (
+                {parametros.map((p) => (
                   <SelectItem key={p.id} value={String(p.id)}>{p.nome}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
           <div className="flex gap-6">
             <div className="flex items-center gap-2">
               <Checkbox id="ativo" checked={ativo} onCheckedChange={v => setAtivo(!!v)} />
@@ -94,7 +101,6 @@ export default function CenarioFormPage() {
               <Label htmlFor="padrao" className="cursor-pointer">Padrão</Label>
             </div>
           </div>
-
           <Button onClick={salvar} disabled={loading}>
             <Save className="mr-2 h-4 w-4" />{loading ? "Salvando..." : "Salvar"}
           </Button>

@@ -605,3 +605,126 @@ def delete_person_event(person_event_id: int):
         raise Exception(f"Não foi possível excluir o evento da pessoa: {e}")
     finally:
         conn.close()
+
+
+def get_area_tracking_data(location_id: int, date_filter: str):
+    """
+    Retorna detecções de pessoas em uma localização numa data.
+    Usado pela tela de Acompanhamento por Área.
+    """
+    sql = """
+        SELECT
+            p."nomePessoa",
+            v.datahoraprocessamento,
+            TO_CHAR((v."tempoMarcacaoSegundos" || ' second')::interval, 'HH24:MI:SS'),
+            v.notacomparacao,
+            c.notaparaignorar,
+            c.notaidentificacao,
+            v.nomearquivovideomarcacao,
+            v.segundomarcacao
+        FROM sch_supervisorio.tb_videos_processados v
+        JOIN sch_supervisorio.tb_cameras c ON v."nomeCamera" = c."nomeCamera"
+        JOIN sch_supervisorio.tb_pessoa p ON p."fotosPessoa" = v."nomePastaPessoa"
+        WHERE c.idlocalizacao = %s
+        AND v.datahoraprocessamento::date = %s
+        ORDER BY v.datahoraprocessamento;
+    """
+    conn = get_db_connection()
+    results = []
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, (location_id, date_filter))
+            rows = cur.fetchall()
+            for row in rows:
+                results.append({
+                    "nome": row[0],
+                    "horario": row[1].strftime("%H:%M:%S") if row[1] else "",
+                    "tempo_marcacao": row[2] or "",
+                    "nota_comparacao": float(row[3]) if row[3] else 0.0,
+                    "nota_ignorar": float(row[4]) if row[4] else 0.0,
+                    "nota_identificacao": float(row[5]) if row[5] else 0.0,
+                    "video_path": row[6] or "",
+                    "segundo_marcacao": int(row[7]) if row[7] else 0,
+                })
+    finally:
+        conn.close()
+    return results
+
+
+def get_persons_in_period(start_date: str, end_date: str, location_id: int = None):
+    """
+    Retorna lista de pessoas com detecções no período.
+    Usado para popular o select da tela de Acompanhamento por Pessoa.
+    """
+    sql = """
+        SELECT DISTINCT p."idPessoa", p."nomePessoa"
+        FROM sch_supervisorio.tb_videos_processados v
+        JOIN sch_supervisorio.tb_pessoa p ON v."nomePastaPessoa" = p."fotosPessoa"
+        JOIN sch_supervisorio.tb_cameras c ON v."nomeCamera" = c."nomeCamera"
+        WHERE v.datahoraprocessamento::date BETWEEN %s AND %s
+    """
+    params = [start_date, end_date]
+
+    if location_id:
+        sql += " AND c.idlocalizacao = %s"
+        params.append(location_id)
+
+    sql += ' ORDER BY p."nomePessoa";'
+
+    conn = get_db_connection()
+    results = []
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+            results = [{"id": row[0], "nome": row[1]} for row in rows]
+    finally:
+        conn.close()
+    return results
+
+
+def get_person_path_data(person_id: int, start_date: str, end_date: str, identified_only: bool = True):
+    """
+    Retorna a sequência de câmeras que uma pessoa passou.
+    Usado pela tela de Acompanhamento por Pessoa.
+    """
+    sql = """
+        SELECT
+            v.datahoraprocessamento,
+            c."nomeCamera",
+            c."andarCamera",
+            c."nrsalaproximaCamera",
+            v.nomearquivovideomarcacao,
+            v.segundomarcacao
+        FROM sch_supervisorio.tb_videos_processados v
+        JOIN sch_supervisorio.tb_pessoa p ON v."nomePastaPessoa" = p."fotosPessoa"
+        JOIN sch_supervisorio.tb_cameras c ON v."nomeCamera" = c."nomeCamera"
+        WHERE p."idPessoa" = %s
+        AND v.datahoraprocessamento::date BETWEEN %s AND %s
+    """
+    params = [person_id, start_date, end_date]
+
+    if identified_only:
+        sql += " AND v.identificada = TRUE"
+
+    sql += " ORDER BY v.datahoraprocessamento;"
+
+    conn = get_db_connection()
+    results = []
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+            for i, row in enumerate(rows):
+                results.append({
+                    "ordem": i + 1,
+                    "horario": row[0].strftime("%H:%M:%S") if row[0] else "",
+                    "camera": row[1] or "",
+                    "andar": row[2] if row[2] is not None else 0,
+                    "sala": row[3] if row[3] is not None else 0,
+                    "video_path": row[4] or "",
+                    "segundo_marcacao": int(row[5]) if row[5] else 0,
+                })
+    finally:
+        conn.close()
+    return results

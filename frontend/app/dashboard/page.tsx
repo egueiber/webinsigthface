@@ -10,6 +10,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Users, Clock, UserCheck, AlertCircle } from "lucide-react";
 
+function parseLoc(l: any) {
+  if (Array.isArray(l)) return { id: l[0], nome: l[1] };
+  return { id: l.idlocalizacao ?? l.id, nome: l.nomelocalizacao ?? l.nome ?? l.name };
+}
+
 export default function DashboardPage() {
   const today     = new Date().toISOString().split("T")[0];
   const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
@@ -24,7 +29,9 @@ export default function DashboardPage() {
   const [error,         setError]         = useState("");
 
   useEffect(() => {
-    getLocalizacoes().then(setLocalizacoes).catch(() => {});
+    getLocalizacoes()
+      .then(locs => setLocalizacoes(locs.map(parseLoc)))
+      .catch(() => {});
     buscar();
   }, []);
 
@@ -39,16 +46,17 @@ export default function DashboardPage() {
       setIndicadores(ind);
       setAtrasados(atr);
     } catch (e: any) {
-      setError(e.message);
+      setError(String(e.message ?? e));
     } finally {
       setLoading(false);
     }
   }
 
+  // Backend retorna: total_served, average_time, total_present
   const stats = [
-    { label: "Pessoas Atendidas",       value: indicadores?.total_atendidos ?? "—", icon: UserCheck },
-    { label: "Tempo Médio Atendimento", value: indicadores?.tempo_medio     ?? "—", icon: Clock     },
-    { label: "Pessoas Presentes",       value: indicadores?.total_presentes  ?? "—", icon: Users     },
+    { label: "Pessoas Atendidas",       value: indicadores?.total_served    ?? indicadores?.total_atendidos  ?? "—", icon: UserCheck },
+    { label: "Tempo Médio Atendimento", value: indicadores?.average_time    ?? indicadores?.tempo_medio      ?? "—", icon: Clock     },
+    { label: "Pessoas Presentes",       value: indicadores?.total_present   ?? indicadores?.total_presentes  ?? "—", icon: Users     },
   ];
 
   return (
@@ -72,8 +80,8 @@ export default function DashboardPage() {
                 <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todas">Todas</SelectItem>
-                  {localizacoes.map((l: any) => (
-                    <SelectItem key={l.id} value={String(l.id)}>{l.nome ?? l.name}</SelectItem>
+                  {localizacoes.map((l) => (
+                    <SelectItem key={l.id} value={String(l.id)}>{l.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -126,9 +134,9 @@ export default function DashboardPage() {
                 <TableRow><TableCell colSpan={3} className="text-center py-10 text-zinc-400">Nenhuma pessoa com atraso no período.</TableCell></TableRow>
               ) : atrasados.map((p: any, i: number) => (
                 <TableRow key={i}>
-                  <TableCell className="font-medium">{p.nome ?? p.name}</TableCell>
-                  <TableCell className="text-center text-orange-600 font-mono">{p.tempo_atraso ?? p.delay_time}</TableCell>
-                  <TableCell className="text-center">{p.localizacao ?? p.location}</TableCell>
+                  <TableCell className="font-medium">{p.name ?? p.nome}</TableCell>
+                  <TableCell className="text-center text-orange-600 font-mono">{p.delay_time ?? p.tempo_atraso}</TableCell>
+                  <TableCell className="text-center">{p.last_location ?? p.localizacao}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

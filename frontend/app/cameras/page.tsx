@@ -10,6 +10,17 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Search, Pencil, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
+// Backend retorna tuplas: [idCamera, nomeCamera, nomelocalizacao]
+function parseCamera(c: any) {
+  if (Array.isArray(c)) return { id: c[0], nome: c[1], localizacao: c[2] };
+  return {
+    id: c.idCamera ?? c.id,
+    nome: c.nomeCamera ?? c.nome ?? c.name,
+    localizacao: c.nomelocalizacao ?? c.localizacao ?? c.location ?? "—",
+    andar: c.andarCamera ?? c.andar ?? c.floor,
+  };
+}
+
 export default function CamerasPage() {
   const [cameras, setCameras] = useState<any[]>([]);
   const [filtro,  setFiltro]  = useState("");
@@ -18,8 +29,8 @@ export default function CamerasPage() {
 
   async function carregar(nome = "") {
     setLoading(true); setError("");
-    try { setCameras(await getCameras(nome)); }
-    catch (e: any) { setError(e.message); }
+    try { setCameras((await getCameras(nome)).map(parseCamera)); }
+    catch (e: any) { setError(String(e.message ?? e)); }
     finally { setLoading(false); }
   }
 
@@ -27,7 +38,7 @@ export default function CamerasPage() {
 
   async function excluir(id: number, nome: string) {
     try { await deleteCamera(id); toast.success(`Câmera "${nome}" excluída.`); carregar(filtro); }
-    catch (e: any) { toast.error("Erro: " + e.message); }
+    catch (e: any) { toast.error("Erro: " + String(e.message ?? e)); }
   }
 
   return (
@@ -65,7 +76,7 @@ export default function CamerasPage() {
               <TableRow><TableCell colSpan={5} className="text-center py-10 text-zinc-400">Carregando...</TableCell></TableRow>
             ) : cameras.length === 0 ? (
               <TableRow><TableCell colSpan={5} className="text-center py-10 text-zinc-400">Nenhuma câmera encontrada.</TableCell></TableRow>
-            ) : cameras.map((c: any) => (
+            ) : cameras.map((c) => (
               <TableRow key={c.id}>
                 <TableCell className="text-zinc-400 font-mono text-xs">{c.id}</TableCell>
                 <TableCell className="font-medium">{c.nome}</TableCell>

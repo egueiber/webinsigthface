@@ -1,8 +1,11 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/pessoas/page": "app/pessoas/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/cameras/page": "app/cameras/page.js",
   "/localizacoes/page": "app/localizacoes/page.js",
-  "/parametros/[id]/page": "app/parametros/[id]/page.js",
+  "/localizacoes/[id]/page": "app/localizacoes/[id]/page.js",
+  "/pessoas/page": "app/pessoas/page.js",
+  "/eventos/page": "app/eventos/page.js",
+  "/acompanhamento-pessoa/page": "app/acompanhamento-pessoa/page.js",
   "/acompanhamento-area/page": "app/acompanhamento-area/page.js",
-  "/pessoas/[id]/page": "app/pessoas/[id]/page.js"
+  "/cenarios/page": "app/cenarios/page.js"
 }

@@ -12,6 +12,12 @@ import { ArrowLeft, Save, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
+// Backend retorna tuplas: [idlocalizacao, nomelocalizacao]
+function parseLoc(l: any) {
+  if (Array.isArray(l)) return { id: l[0], nome: l[1] };
+  return { id: l.idlocalizacao ?? l.id, nome: l.nomelocalizacao ?? l.nome ?? l.name };
+}
+
 export default function CameraFormPage() {
   const router = useRouter();
   const params = useParams();
@@ -29,35 +35,46 @@ export default function CameraFormPage() {
   const [error,             setError]             = useState("");
 
   useEffect(() => {
-    getLocalizacoes().then(setLocalizacoes).catch(() => {});
+    getLocalizacoes()
+      .then(locs => setLocalizacoes(locs.map(parseLoc)))
+      .catch(() => {});
+
     if (!isNew) {
       getCamera(Number(id)).then(data => {
-        setNome(data.nome ?? "");
-        setLocalizacaoId(String(data.idlocalizacao ?? ""));
-        setAndar(String(data.andar ?? 0));
-        setNrsala(String(data.nrsala ?? 0));
-        setNotaIgnorar(String(data.notaparaignorar ?? 0.7));
-        setNotaIdentificacao(String(data.notaidentificacao ?? 0.7));
-      }).catch(e => setError(e.message));
+        setNome(data.nome ?? data.name ?? "");
+        setLocalizacaoId(String(data.idlocalizacao ?? data.location_id ?? ""));
+        setAndar(String(data.andar ?? data.floor ?? 0));
+        setNrsala(String(data.nrsalaproxima ?? data.room_number ?? 0));
+        setNotaIgnorar(String(data.notaparaignorar ?? data.ignore_threshold ?? 0.7));
+        setNotaIdentificacao(String(data.notaidentificacao ?? data.identification_threshold ?? 0.7));
+      }).catch(e => setError(String(e.message ?? e)));
     }
   }, [id]);
 
   async function salvar() {
-    if (!nome.trim() || !localizacaoId) { setError("Preencha o Nome e selecione uma Localização."); return; }
+    if (!nome.trim() || !localizacaoId) {
+      setError("Preencha o Nome e selecione uma Localização.");
+      return;
+    }
     setLoading(true); setError("");
     try {
       const payload = {
-        nome, idlocalizacao: Number(localizacaoId),
-        andar: Number(andar), nrsala: Number(nrsala),
-        notaparaignorar: Number(notaIgnorar),
-        notaidentificacao: Number(notaIdentificacao),
+        nome,
+        idlocalizacao: Number(localizacaoId),
+        andar: Number(andar),
+        nrsalaproxima: Number(nrsala),
+        notaparaignorar: parseFloat(notaIgnorar),
+        notaidentificacao: parseFloat(notaIdentificacao),
       };
       if (isNew) await createCamera(payload);
       else await updateCamera(Number(id), payload);
       toast.success("Câmera salva com sucesso!");
       router.push("/cameras");
-    } catch (e: any) { setError(e.message); }
-    finally { setLoading(false); }
+    } catch (e: any) {
+      setError(String(e.message ?? e));
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -69,7 +86,12 @@ export default function CameraFormPage() {
         <h1 className="text-2xl font-bold text-zinc-800">{isNew ? "Nova Câmera" : "Editar Câmera"}</h1>
       </div>
 
-      {error && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader><CardTitle className="text-base">Dados da Câmera</CardTitle></CardHeader>
@@ -84,7 +106,7 @@ export default function CameraFormPage() {
             <Select value={localizacaoId} onValueChange={setLocalizacaoId}>
               <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>
-                {localizacoes.map((l: any) => (
+                {localizacoes.map((l) => (
                   <SelectItem key={l.id} value={String(l.id)}>{l.nome}</SelectItem>
                 ))}
               </SelectContent>

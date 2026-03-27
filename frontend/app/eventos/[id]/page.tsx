@@ -25,8 +25,12 @@ export default function EventoFormPage() {
   useEffect(() => {
     if (!isNew) {
       getEvento(Number(id))
-        .then(data => { setNome(data.nome ?? ""); setDuracao(data.duracao != null ? String(data.duracao) : ""); })
-        .catch(e => setError(e.message));
+        .then(data => {
+          setNome(data.nome ?? data.nomeevento ?? data.name ?? "");
+          const dur = data.duracao ?? data.eventoduracao ?? data.duration;
+          setDuracao(dur != null ? String(Math.round(dur)) : "");
+        })
+        .catch(e => setError(String(e.message ?? e)));
     }
   }, [id]);
 
@@ -35,12 +39,13 @@ export default function EventoFormPage() {
     if (duracao && isNaN(Number(duracao))) { setError("A duração deve ser um número inteiro."); return; }
     setLoading(true); setError("");
     try {
-      const payload = { nome, duracao: duracao ? Number(duracao) : null };
+      // Garante que duração seja inteiro
+      const payload = { nome, duracao: duracao ? Math.round(Number(duracao)) : null };
       if (isNew) await createEvento(payload);
       else await updateEvento(Number(id), payload);
       toast.success("Evento salvo com sucesso!");
       router.push("/eventos");
-    } catch (e: any) { setError(e.message); }
+    } catch (e: any) { setError(String(e.message ?? e)); }
     finally { setLoading(false); }
   }
 
@@ -64,10 +69,10 @@ export default function EventoFormPage() {
           </div>
           <div className="space-y-1.5">
             <Label>Duração (minutos)</Label>
-            <Input type="number" value={duracao} onChange={e => setDuracao(e.target.value)}
+            <Input type="number" step="1" value={duracao} onChange={e => setDuracao(e.target.value)}
               placeholder="Ex: 30" className="w-40" />
+            <p className="text-xs text-zinc-400">Deixe em branco se não houver duração definida.</p>
           </div>
-
           <Button onClick={salvar} disabled={loading}>
             <Save className="mr-2 h-4 w-4" />{loading ? "Salvando..." : "Salvar"}
           </Button>

@@ -17,16 +17,19 @@ export default function LocalizacaoFormPage() {
   const id     = params?.id as string;
   const isNew  = id === "novo";
 
-  const [nome,      setNome]      = useState("");
-  const [mapaPath,  setMapaPath]  = useState("");
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState("");
+  const [nome,     setNome]     = useState("");
+  const [mapaPath, setMapaPath] = useState("");
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState("");
 
   useEffect(() => {
     if (!isNew) {
       getLocalizacao(Number(id))
-        .then(data => { setNome(data.nome ?? ""); setMapaPath(data.mapa_path ?? ""); })
-        .catch(e => setError(e.message));
+        .then(data => {
+          setNome(data.nome ?? data.nomelocalizacao ?? data.name ?? "");
+          setMapaPath(data.mapa_path ?? data.mapacamera ?? "");
+        })
+        .catch(e => setError(String(e.message ?? e)));
     }
   }, [id]);
 
@@ -39,7 +42,7 @@ export default function LocalizacaoFormPage() {
       else await updateLocalizacao(Number(id), payload);
       toast.success("Localização salva com sucesso!");
       router.push("/localizacoes");
-    } catch (e: any) { setError(e.message); }
+    } catch (e: any) { setError(String(e.message ?? e)); }
     finally { setLoading(false); }
   }
 
@@ -64,10 +67,9 @@ export default function LocalizacaoFormPage() {
           <div className="space-y-1.5">
             <Label>Caminho da Imagem (Mapa)</Label>
             <Input value={mapaPath} onChange={e => setMapaPath(e.target.value)}
-              placeholder="Ex: C:\mapas\ala_norte.png" className="font-mono text-sm" />
-            <p className="text-xs text-zinc-400">Caminho completo do arquivo de mapa no servidor.</p>
+              placeholder="Ex: /app/data/mapas/ala_norte.png" className="font-mono text-sm" />
+            <p className="text-xs text-zinc-400">Caminho do arquivo de mapa dentro do servidor Docker.</p>
           </div>
-
           <Button onClick={salvar} disabled={loading}>
             <Save className="mr-2 h-4 w-4" />{loading ? "Salvando..." : "Salvar"}
           </Button>
