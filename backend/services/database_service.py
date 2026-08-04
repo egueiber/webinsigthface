@@ -57,7 +57,7 @@ def list_persons(name_filter: str = ""):
 
 
 def get_person_by_id(person_id: int):
-    sql = 'SELECT "nomePessoa", "documentoPessoa" FROM sch_supervisorio.tb_pessoa WHERE "idPessoa" = %s'
+    sql = '''SELECT "nomePessoa", "documentoPessoa", "fotosPessoa", "carteirinhaBiodoc" FROM sch_supervisorio.tb_pessoa WHERE "idPessoa" = %s'''
     conn = get_db_connection()
     person = None
     try:
@@ -65,33 +65,44 @@ def get_person_by_id(person_id: int):
             cur.execute(sql, (person_id,))
             result = cur.fetchone()
             if result:
-                person = {"name": result[0], "document": result[1]}
+                person = {
+                    "name": result[0],
+                    "document": result[1],
+                    "photos_folder": result[2] or "",
+                    "biodoc_card": result[3] or "",
+                }
     finally:
         conn.close()
     return person
 
 
-def save_person(name: str, document: str, photos_folder: str, person_id: int = None):
+def save_person(name: str, document: str, photos_folder: str, person_id: int = None, biodoc_card: str = None):
     conn = get_db_connection()
     try:
         if person_id:
             sql = """
                 UPDATE sch_supervisorio.tb_pessoa
-                SET "nomePessoa" = %s, "documentoPessoa" = %s, "fotosPessoa" = %s
+                SET "nomePessoa" = %s, "documentoPessoa" = %s, "fotosPessoa" = %s, "carteirinhaBiodoc" = %s
                 WHERE "idPessoa" = %s
             """
-            params = (name, document, photos_folder, person_id)
+            params = (name, document, photos_folder, biodoc_card, person_id)
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+            conn.commit()
+            return person_id
         else:
             sql = """
                 INSERT INTO sch_supervisorio.tb_pessoa
-                ("documentoPessoa", "nomePessoa", "fotosPessoa")
-                VALUES (%s, %s, %s)
+                ("documentoPessoa", "nomePessoa", "fotosPessoa", "carteirinhaBiodoc")
+                VALUES (%s, %s, %s, %s)
+                RETURNING "idPessoa"
             """
-            params = (document, name, photos_folder)
-        with conn.cursor() as cur:
-            cur.execute(sql, params)
-        conn.commit()
-        return True
+            params = (document, name, photos_folder, biodoc_card)
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                new_id = cur.fetchone()[0]
+            conn.commit()
+            return new_id
     except Exception as e:
         conn.rollback()
         if "unique constraint" in str(e):
@@ -621,7 +632,9 @@ def get_area_tracking_data(location_id: int, date_filter: str):
             c.notaparaignorar,
             c.notaidentificacao,
             v.nomearquivovideomarcacao,
-            v.segundomarcacao
+            v.segundomarcacao,
+            v."nomePastaPessoa",
+            v.datahora_ao_vivo
         FROM sch_supervisorio.tb_videos_processados v
         JOIN sch_supervisorio.tb_cameras c ON v."nomeCamera" = c."nomeCamera"
         JOIN sch_supervisorio.tb_pessoa p ON p."fotosPessoa" = v."nomePastaPessoa"
@@ -639,12 +652,16 @@ def get_area_tracking_data(location_id: int, date_filter: str):
                 results.append({
                     "nome": row[0],
                     "horario": row[1].strftime("%H:%M:%S") if row[1] else "",
+                    "data": row[1].strftime("%d/%m/%Y") if row[1] else "",
+                    "data_hora": row[1].strftime("%d/%m/%Y %H:%M:%S") if row[1] else "",
                     "tempo_marcacao": row[2] or "",
                     "nota_comparacao": float(row[3]) if row[3] else 0.0,
                     "nota_ignorar": float(row[4]) if row[4] else 0.0,
                     "nota_identificacao": float(row[5]) if row[5] else 0.0,
                     "video_path": row[6] or "",
                     "segundo_marcacao": int(row[7]) if row[7] else 0,
+                    "pasta_pessoa": row[8] or "",
+                    "datahora_ao_vivo": row[9].isoformat() if row[9] else "",
                 })
     finally:
         conn.close()
@@ -695,7 +712,9 @@ def get_person_path_data(person_id: int, start_date: str, end_date: str, identif
             c."andarCamera",
             c."nrsalaproximaCamera",
             v.nomearquivovideomarcacao,
-            v.segundomarcacao
+            v.segundomarcacao,
+            v."nomePastaPessoa",
+            v.datahora_ao_vivo
         FROM sch_supervisorio.tb_videos_processados v
         JOIN sch_supervisorio.tb_pessoa p ON v."nomePastaPessoa" = p."fotosPessoa"
         JOIN sch_supervisorio.tb_cameras c ON v."nomeCamera" = c."nomeCamera"
@@ -719,12 +738,85 @@ def get_person_path_data(person_id: int, start_date: str, end_date: str, identif
                 results.append({
                     "ordem": i + 1,
                     "horario": row[0].strftime("%H:%M:%S") if row[0] else "",
+                    "data": row[0].strftime("%d/%m/%Y") if row[0] else "",
+                    "data_hora": row[0].strftime("%d/%m/%Y %H:%M:%S") if row[0] else "",
                     "camera": row[1] or "",
                     "andar": row[2] if row[2] is not None else 0,
                     "sala": row[3] if row[3] is not None else 0,
                     "video_path": row[4] or "",
                     "segundo_marcacao": int(row[5]) if row[5] else 0,
+                    "pasta_pessoa": row[6] or "",
+                    "datahora_ao_vivo": row[7].isoformat() if row[7] else "",
                 })
     finally:
         conn.close()
     return results
+
+def list_person_events(person_id: int = None):
+    """Lista eventos de pessoas. Se person_id informado, filtra por pessoa."""
+    sql = """
+        SELECT
+            pe.idpessoaevento,
+            p."nomePessoa",
+            e.nomeevento,
+            pe.datahoraentrada,
+            pe.datahoraprevistasaida,
+            pe.datahoraefetivasaida,
+            pe.eventocancelado,
+            pe.idpessoa,
+            pe.idevento
+        FROM sch_supervisorio.tb_pessoa_evento pe
+        JOIN sch_supervisorio.tb_pessoa p ON pe.idpessoa = p."idPessoa"
+        JOIN sch_supervisorio.tb_evento e ON pe.idevento = e.idevento
+    """
+    params = []
+    if person_id:
+        sql += " WHERE pe.idpessoa = %s"
+        params.append(person_id)
+    sql += " ORDER BY pe.datahoraentrada DESC"
+    conn = get_db_connection()
+    results = []
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+            for row in rows:
+                results.append({
+                    "id": row[0],
+                    "nome_pessoa": row[1],
+                    "nome_evento": row[2],
+                    "entrada": row[3].isoformat() if row[3] else None,
+                    "saida_prevista": row[4].isoformat() if row[4] else None,
+                    "saida_efetiva": row[5].isoformat() if row[5] else None,
+                    "cancelado": row[6],
+                    "pessoa_id": row[7],
+                    "evento_id": row[8],
+                })
+    finally:
+        conn.close()
+    return results
+
+
+# --- Configuração da Biodoc (lida do parâmetro padrão) ---
+def get_biodoc_config():
+    """
+    Retorna a URL e o token da Biodoc a partir do parâmetro marcado como padrão
+    (tb_parametro.padrao = true). Se não houver parâmetro padrão, retorna o
+    primeiro parâmetro disponível. Campos: biodocapiurl, biodocapitoken.
+    Retorna dict {"url": str, "token": str} — valores podem ser "" se não configurados.
+    """
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT biodocapiurl, biodocapitoken
+                FROM sch_supervisorio.tb_parametro
+                ORDER BY padrao DESC NULLS LAST, "idParametro" ASC
+                LIMIT 1
+            """)
+            row = cur.fetchone()
+            if not row:
+                return {"url": "", "token": ""}
+            return {"url": row[0] or "", "token": row[1] or ""}
+    finally:
+        conn.close()

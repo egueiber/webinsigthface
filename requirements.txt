@@ -114,3 +114,7 @@ wrapt==1.14.2
 zipp==3.23.0
 tkcalendar==1.6.1
 dlib @ file:///C:/Projetos/Python/Face/libs/dlib-19.22.99-cp39-cp39-win_amd64.whl#sha256=0fd828405c77af2df1ff6a09964a8ba7f14838c538d9017046804f353e9b4bc2
+python-multipart
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1

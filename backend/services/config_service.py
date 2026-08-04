@@ -60,7 +60,7 @@ def get_parameter_by_id(param_id: int):
                "caminhoVideoAProcessar", "caminhoVideoProcessados",
                "caminhoVideoMarcacoes", "intevalorFrames", "escalaImagem",
                "modeloDeteccao", "toleranciaReconhecimento", "gerarvideomarcacoes",
-               "finalizaraoidentificartodos"
+               "finalizaraoidentificartodos", biodocapiurl, biodocapitoken
         FROM sch_supervisorio.tb_parametro WHERE "idParametro" = %s
     """
     conn = get_db_connection()
@@ -82,7 +82,9 @@ def get_parameter_by_id(param_id: int):
                     "detection_model": result[9],
                     "recognition_tolerance": result[10],
                     "generate_markers": result[11],
-                    "finish_when_all_identified": result[12]
+                    "finish_when_all_identified": result[12],
+                    "biodoc_api_url": result[13] or "",
+                    "biodoc_api_token": result[14] or ""
                 }
             return None
     finally:
@@ -102,7 +104,8 @@ def save_parameters(param_data: dict, param_id: int = None):
                         "caminhoVideoAProcessar" = %s, "caminhoVideoProcessados" = %s,
                         "caminhoVideoMarcacoes" = %s, "intevalorFrames" = %s, "escalaImagem" = %s,
                         "modeloDeteccao" = %s, "toleranciaReconhecimento" = %s,
-                        "gerarvideomarcacoes" = %s, "finalizaraoidentificartodos" = %s
+                        "gerarvideomarcacoes" = %s, "finalizaraoidentificartodos" = %s,
+                        biodocapiurl = %s, biodocapitoken = %s
                     WHERE "idParametro" = %s
                 """
                 params = (
@@ -111,7 +114,9 @@ def save_parameters(param_data: dict, param_id: int = None):
                     param_data['video_markers_path'], param_data['frame_interval'],
                     param_data['image_scale'], param_data['detection_model'],
                     param_data['recognition_tolerance'], param_data['generate_markers'],
-                    param_data['finish_when_all_identified'], param_id
+                    param_data['finish_when_all_identified'],
+                    param_data.get('biodoc_api_url', ''), param_data.get('biodoc_api_token', ''),
+                    param_id
                 )
             else:
                 sql = """
@@ -120,8 +125,8 @@ def save_parameters(param_data: dict, param_id: int = None):
                         "caminhoVideoAProcessar", "caminhoVideoProcessados",
                         "caminhoVideoMarcacoes", "intevalorFrames", "escalaImagem",
                         "modeloDeteccao", "toleranciaReconhecimento", "gerarvideomarcacoes",
-                        "finalizaraoidentificartodos"
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        "finalizaraoidentificartodos", biodocapiurl, biodocapitoken
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING "idParametro"
                 """
                 params = (
@@ -130,7 +135,8 @@ def save_parameters(param_data: dict, param_id: int = None):
                     param_data['video_markers_path'], param_data['frame_interval'],
                     param_data['image_scale'], param_data['detection_model'],
                     param_data['recognition_tolerance'], param_data['generate_markers'],
-                    param_data['finish_when_all_identified']
+                    param_data['finish_when_all_identified'],
+                    param_data.get('biodoc_api_url', ''), param_data.get('biodoc_api_token', '')
                 )
 
             cur.execute(sql, params)
@@ -173,7 +179,7 @@ def load_parameters():
                "caminhoVideoAProcessar", "caminhoVideoProcessados",
                "caminhoVideoMarcacoes", "intevalorFrames", "escalaImagem",
                "modeloDeteccao", "toleranciaReconhecimento", "gerarvideomarcacoes",
-               "finalizaraoidentificartodos"
+               "finalizaraoidentificartodos", biodocapiurl, biodocapitoken
         FROM sch_supervisorio.tb_parametro LIMIT 1
     """
     conn = get_db_connection()
@@ -196,7 +202,9 @@ def load_parameters():
                     "detection_model": result[9],
                     "recognition_tolerance": result[10],
                     "generate_markers": result[11],
-                    "finish_when_all_identified": result[12]
+                    "finish_when_all_identified": result[12],
+                    "biodoc_api_url": result[13] or "",
+                    "biodoc_api_token": result[14] or ""
                 }
             return None
     except Exception as e:

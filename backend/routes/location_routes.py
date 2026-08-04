@@ -25,8 +25,8 @@ def get_location(location_id: int):
 @router.post("/")
 def create_location(name: str, map_path: str = ""):
     try:
-        save_location(name, map_path)
-        return {"message": "Location created successfully"}
+        new_id = save_location(name, map_path)
+        return {"message": "Location created successfully", "id": new_id}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -35,7 +35,7 @@ def create_location(name: str, map_path: str = ""):
 def update_location(location_id: int, name: str, map_path: str = ""):
     try:
         save_location(name, map_path, location_id)
-        return {"message": "Location updated successfully"}
+        return {"message": "Location updated successfully", "id": location_id}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

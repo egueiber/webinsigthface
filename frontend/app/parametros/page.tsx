@@ -1,12 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getParametros, deleteParametro } from "@/lib/api";
+import { getParametros, deleteParametro, getUsuarioLocal } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, AlertCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, AlertCircle, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
 // Backend retorna tuplas: [idParametro, nomeparametro]
@@ -16,9 +16,10 @@ function parseParam(p: any) {
 }
 
 export default function ParametrosPage() {
-  const [items,   setItems]   = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState("");
+  const [items,    setItems]    = useState<any[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState("");
+  const [souAdmin, setSouAdmin] = useState(false);
 
   async function carregar() {
     setLoading(true); setError("");
@@ -27,11 +28,23 @@ export default function ParametrosPage() {
     finally { setLoading(false); }
   }
 
-  useEffect(() => { carregar(); }, []);
+  useEffect(() => {
+    setSouAdmin(getUsuarioLocal()?.papel === "admin");
+    carregar();
+  }, []);
 
   async function excluir(id: number, nome: string) {
     try { await deleteParametro(id); toast.success(`Parâmetro "${nome}" excluído.`); carregar(); }
     catch (e: any) { toast.error("Erro: " + e.message); }
+  }
+
+  if (!souAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-zinc-400 gap-3">
+        <ShieldAlert className="h-10 w-10" />
+        <p className="text-sm">Esta área é restrita a administradores.</p>
+      </div>
+    );
   }
 
   return (

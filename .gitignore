@@ -1,18 +1,19 @@
-```gitignore
-# Ambiente Virtual
-venv/
-*.venv/
+# Segredos reais — nunca versionar. Use .env.example como referência.
+.env
 
-# Arquivos compilados do Python
+# Dependências do frontend — reinstala com `npm install`, não precisa versionar.
+frontend/node_modules/
+
+# Build do Next.js — gerado automaticamente a cada `npm run dev`/`npm run build`.
+frontend/.next/
+
+# Cache/bytecode do Python.
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
+backend/__pycache__/
+backend/routes/__pycache__/
+backend/services/__pycache__/
 
-# Arquivos de IDE (VSCode)
-.vscode/
-
-# Arquivos de build e distribuição
-build/
-dist/
-*.egg-info/
+# Dados reais e sensíveis (biometria, vídeo de marcação, LGPD) — nunca versionar.
+videomarcacoes/
+data/

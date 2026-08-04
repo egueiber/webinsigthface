@@ -6,14 +6,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertCircle, X } from "lucide-react";
 
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 function today() { return new Date().toISOString().slice(0, 10); }
 
 interface Deteccao {
-  nome: string; horario: string; tempo_marcacao: string;
+  nome: string; horario: string; data_hora?: string; tempo_marcacao: string;
   nota_comparacao: number; nota_ignorar: number; nota_identificacao: number;
   video_path: string; segundo_marcacao: number;
+  pasta_pessoa: string; datahora_ao_vivo: string;
 }
 interface PessoaAgrupada {
   nome: string; deteccoes: Deteccao[]; primeira: string; ultima: string;
@@ -29,6 +32,21 @@ function corNota(nota: number, ignorar: number, identificacao: number) {
 const CORES   = ["#3b82f6","#8b5cf6","#ec4899","#14b8a6","#f97316","#06b6d4","#84cc16","#f43f5e","#a855f7","#0ea5e9"];
 const OFFSETS = [[50,50],[25,30],[75,30],[25,70],[75,70],[15,50],[85,50],[50,15],[50,82],[38,42]];
 
+// Monta a URL do frame da detecção (mesmo endpoint da tela de Acomp. Pessoa,
+// que gera o frame a partir do vídeo de marcação + pasta da pessoa).
+function frameUrl(d: Deteccao) {
+  const qs = new URLSearchParams({
+    video_path: d.video_path,
+    person_folder: d.pasta_pessoa,
+    datahora_ao_vivo: d.datahora_ao_vivo,
+  });
+  return `${API}/media/detection-frame?${qs}`;
+}
+// O frame só existe se tivermos o caminho do vídeo e a pasta da pessoa.
+function temFrame(d: Deteccao) {
+  return Boolean(d.video_path && d.pasta_pessoa);
+}
+
 export default function AcompanhamentoAreaPage() {
   const [localizacoes, setLocalizacoes] = useState<any[]>([]);
   const [locId,  setLocId]    = useState("");
@@ -40,6 +58,8 @@ export default function AcompanhamentoAreaPage() {
   const [tooltip,    setTooltip]    = useState<{x:number;y:number;p:PessoaAgrupada}|null>(null);
   const [loading,    setLoading]    = useState(false);
   const [error,      setError]      = useState("");
+  const [frameModal, setFrameModal] = useState<Deteccao | null>(null);
+  const [frameErro,  setFrameErro]  = useState("");
 
   useEffect(() => {
     getLocalizacoes().then(locs => {
@@ -57,7 +77,7 @@ export default function AcompanhamentoAreaPage() {
     try {
       const dados = await getAreaTracking(Number(locId), data);
       setDeteccoes(dados);
-      if (dados.length === 0) { setError("Nenhuma detecção encontrada. Verifique se o motor de reconhecimento processou vídeos para essa localização e data."); return; }
+      if (dados.length === 0) { setError("Nenhuma detecção encontrada para essa localização e data."); return; }
       const mapa: Record<string, PessoaAgrupada> = {};
       for (const d of dados) {
         if (!mapa[d.nome]) mapa[d.nome] = { nome: d.nome, deteccoes: [], primeira: d.horario, ultima: d.horario, melhorNota: 0, notaIgnorar: d.nota_ignorar, notaIdentificacao: d.nota_identificacao };
@@ -67,7 +87,7 @@ export default function AcompanhamentoAreaPage() {
         if (d.nota_comparacao > mapa[d.nome].melhorNota) mapa[d.nome].melhorNota = d.nota_comparacao;
       }
       setPessoas(Object.values(mapa));
-    } catch (e: any) { setError(e.message); }
+    } catch (e: any) { setError(String(e.message ?? e)); }
     finally { setLoading(false); }
   }
 
@@ -164,6 +184,7 @@ export default function AcompanhamentoAreaPage() {
                     <TableHead>Nome</TableHead>
                     <TableHead className="text-center">Horário</TableHead>
                     <TableHead className="text-center">Nota</TableHead>
+                    <TableHead className="text-center w-16">Frame</TableHead>
                   </TableRow></TableHeader>
                   <TableBody>
                     {listaAtiva.map((d, i) => {
@@ -177,6 +198,14 @@ export default function AcompanhamentoAreaPage() {
                               style={{background:cor.bg+"20",color:cor.border}}>
                               {d.nota_comparacao.toFixed(2)}
                             </span>
+                          </TableCell>
+                          <TableCell className="text-center py-2">
+                            {temFrame(d) ? (
+                              <button onClick={() => { setFrameErro(""); setFrameModal(d); }}
+                                className="text-xs text-blue-500 underline hover:text-blue-700">
+                                Ver
+                              </button>
+                            ) : <span className="text-xs text-zinc-300">—</span>}
                           </TableCell>
                         </TableRow>
                       );
@@ -194,6 +223,36 @@ export default function AcompanhamentoAreaPage() {
           <p className="text-sm">Selecione uma localização e data e clique em Buscar.</p>
         </div>
       )}
+
+      {/* Modal de frame de detecção */}
+      <Dialog open={!!frameModal} onOpenChange={() => { setFrameModal(null); setFrameErro(""); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Frame de Detecção — {frameModal?.nome}</DialogTitle>
+          </DialogHeader>
+          {frameModal && (
+            <div className="space-y-3">
+              {frameErro ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">{frameErro}</AlertDescription>
+                </Alert>
+              ) : (
+                <img
+                  src={frameUrl(frameModal)}
+                  alt={`Frame de ${frameModal.nome}`}
+                  className="w-full rounded-lg border border-zinc-200"
+                  onError={() => setFrameErro("Não foi possível carregar o frame. O arquivo pode não estar disponível no servidor.")}
+                />
+              )}
+              <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
+                <span><strong>Horário:</strong> {frameModal.horario}</span>
+                <span><strong>Nota:</strong> {frameModal.nota_comparacao.toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

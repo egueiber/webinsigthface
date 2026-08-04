@@ -51,17 +51,23 @@ def save_location(name: str, map_path: str, location_id: int = None):
                 WHERE idlocalizacao = %s
             """
             params = (name, map_path, location_id)
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+            conn.commit()
+            return location_id
         else:
             sql = """
                 INSERT INTO sch_supervisorio.tb_localizacao
                 (nomelocalizacao, mapacamera)
                 VALUES (%s, %s)
+                RETURNING idlocalizacao
             """
             params = (name, map_path)
-        with conn.cursor() as cur:
-            cur.execute(sql, params)
-        conn.commit()
-        return True
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                new_id = cur.fetchone()[0]
+            conn.commit()
+            return new_id
     except Exception as e:
         conn.rollback()
         if "unique constraint" in str(e):

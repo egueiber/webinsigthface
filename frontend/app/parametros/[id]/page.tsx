@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { getParametro, createParametro, updateParametro } from "@/lib/api";
+import { getParametro, createParametro, updateParametro, getUsuarioLocal } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Save, AlertCircle } from "lucide-react";
+import { ArrowLeft, Save, AlertCircle, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -20,6 +20,7 @@ const defaults = {
   intervalo_frames: "15", escala_imagem: "1.0",
   tolerancia: "0.6", modelo_deteccao: "hog",
   gerar_marcoes: false, finalizaraoidentificartodos: false,
+  biodoc_api_url: "", biodoc_api_token: "",
 };
 
 export default function ParametroFormPage() {
@@ -30,22 +31,41 @@ export default function ParametroFormPage() {
 
   const [form,    setForm]    = useState(defaults);
   const [loading, setLoading] = useState(false);
+  const [carregando, setCarregando] = useState(!isNew);
   const [error,   setError]   = useState("");
+  const [souAdmin, setSouAdmin] = useState(false);
+
+  useEffect(() => {
+    setSouAdmin(getUsuarioLocal()?.papel === "admin");
+  }, []);
 
   useEffect(() => {
     if (!isNew) {
-      getParametro(Number(id)).then(data => setForm({
-        nome: data.nome ?? "", fotos: data.fotos ?? "", mapas: data.mapas ?? "",
-        videos_a_processar: data.videos_a_processar ?? "",
-        videos_processados: data.videos_processados ?? "",
-        video_marcoes: data.video_marcoes ?? "",
-        intervalo_frames: String(data.intervalo_frames ?? 15),
-        escala_imagem: String(data.escala_imagem ?? 1.0),
-        tolerancia: String(data.tolerancia ?? 0.6),
-        modelo_deteccao: data.modelo_deteccao ?? "hog",
-        gerar_marcoes: data.gerar_marcoes ?? false,
-        finalizaraoidentificartodos: data.finalizaraoidentificartodos ?? false,
-      })).catch(e => setError(e.message));
+      setCarregando(true);
+      getParametro(Number(id))
+        .then(data => {
+          // O backend devolve os campos em ingles (name, photos_path, ...).
+          // Aceita tambem os nomes em portugues, por seguranca.
+          setForm({
+            nome:               data.name ?? data.nome ?? "",
+            fotos:              data.photos_path ?? data.fotos ?? "",
+            mapas:              data.maps_path ?? data.mapas ?? "",
+            videos_a_processar: data.videos_to_process_path ?? data.videos_a_processar ?? "",
+            videos_processados: data.processed_videos_path ?? data.videos_processados ?? "",
+            video_marcoes:      data.video_markers_path ?? data.video_marcoes ?? "",
+            intervalo_frames:   String(data.frame_interval ?? data.intervalo_frames ?? 15),
+            escala_imagem:      String(data.image_scale ?? data.escala_imagem ?? 1.0),
+            tolerancia:         String(data.recognition_tolerance ?? data.tolerancia ?? 0.6),
+            modelo_deteccao:    data.detection_model ?? data.modelo_deteccao ?? "hog",
+            gerar_marcoes:      data.generate_markers ?? data.gerar_marcoes ?? false,
+            finalizaraoidentificartodos:
+              data.finish_when_all_identified ?? data.finalizaraoidentificartodos ?? false,
+            biodoc_api_url:     data.biodoc_api_url ?? "",
+            biodoc_api_token:   data.biodoc_api_token ?? "",
+          });
+        })
+        .catch(e => setError(String(e.message ?? e)))
+        .finally(() => setCarregando(false));
     }
   }, [id]);
 
@@ -67,7 +87,7 @@ export default function ParametroFormPage() {
       else await updateParametro(Number(id), payload);
       toast.success("Parâmetros salvos com sucesso!");
       router.push("/parametros");
-    } catch (e: any) { setError(e.message); }
+    } catch (e: any) { setError(String(e.message ?? e)); }
     finally { setLoading(false); }
   }
 
@@ -78,6 +98,31 @@ export default function ParametroFormPage() {
         className="font-mono text-sm" placeholder="Ex: C:\pasta\" />
     </div>
   );
+
+  if (carregando) {
+    return (
+      <div className="space-y-6 max-w-2xl">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/parametros"><ArrowLeft className="h-4 w-4" /></Link>
+          </Button>
+          <h1 className="text-2xl font-bold text-zinc-800">Editar Parâmetro</h1>
+        </div>
+        <div className="flex items-center justify-center py-20 text-zinc-400 text-sm">
+          Carregando parâmetros...
+        </div>
+      </div>
+    );
+  }
+
+  if (!souAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-zinc-400 gap-3">
+        <ShieldAlert className="h-10 w-10" />
+        <p className="text-sm">Esta área é restrita a administradores.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -154,6 +199,27 @@ export default function ParametroFormPage() {
                 Finalizar ao identificar todos com eventos ativos
               </Label>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Integração Biodoc</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="biodoc-url">URL da API</Label>
+            <Input id="biodoc-url" name="biodoc-url" autoComplete="off"
+              value={form.biodoc_api_url} onChange={e => set("biodoc_api_url", e.target.value)}
+              className="font-mono text-sm" placeholder="Ex: https://api.sandbox.biodoc.com.br/api" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="biodoc-token">Token de Acesso</Label>
+            <Input id="biodoc-token" name="biodoc-token" type="password" autoComplete="new-password"
+              value={form.biodoc_api_token} onChange={e => set("biodoc_api_token", e.target.value)}
+              className="font-mono text-sm" placeholder="Token fornecido pela Biodoc" />
+            <p className="text-xs text-zinc-400">
+              Usado para buscar fotos biométricas dos beneficiários. Fornecido pela Biodoc à Unimed.
+            </p>
           </div>
         </CardContent>
       </Card>
