@@ -44,8 +44,8 @@ O sistema é composto por **três componentes independentes** que se comunicam *
 **Pontos importantes:**
 
 - O **motor** e o **sistema web** não conversam diretamente. O motor processa vídeos e grava as detecções no banco; o sistema web lê essas detecções e as exibe.
-- O banco é **compartilhado** com a versão desktop (que ainda existe e é mantida em paralelo). Qualquer alteração de estrutura precisa ser coordenada entre as duas versões.
-- O motor roda **nativamente no Windows** hoje (precisa de GPU/CUDA, acesso às pastas de vídeo, e abre uma janela própria). Só o **banco de dados e o backend** rodam em Docker — o frontend roda separado, direto na máquina, com `npm run dev` (ver seção seguinte).
+- O banco é **compartilhado** com a versão desktop (que ainda existe e é mantida em paralelo) e com o sistema separado de detecção de EPI (`tb_epi`, `tb_camera_epi`) — não é incomum ver tabelas de outros projetos ao listar o schema. O sistema web nunca lê nem escreve nessas tabelas, só convivem no mesmo banco.
+- Só o **banco de dados e o backend** rodam em Docker — o frontend roda separado, direto na máquina, com `npm run dev` (ver seção seguinte).
 - Existe um plano para containerizar o motor também (documentado em `MIGRACAO_CAMINHOS.md`), mas isso **ainda não foi feito** — veja [Pendências conhecidas](#pendências-conhecidas).
 
 ---
@@ -93,7 +93,9 @@ cd C:\caminho\para\face_recognition
 docker compose up -d
 ```
 
-Isso sobe dois containers: `healthtrack-db` (PostgreSQL) e `healthtrack-api` (FastAPI, porta `8000`). O banco já é inicializado com a estrutura de tabelas na primeira subida.
+Isso sobe dois containers: `healthtrack-db` (PostgreSQL) e `healthtrack-api` (FastAPI, porta `8000`).
+
+Numa máquina nova (volume do banco vazio), o Postgres executa automaticamente, em ordem, todos os arquivos `.sql` da pasta `database/` — primeiro `01_schema_base.sql` (as tabelas principais), depois `02_auth_biodoc.sql` (autenticação e campos da integração Biodoc). O banco sobe pronto para uso, sem passo manual.
 
 Para ver os logs (útil se algo não subir):
 
@@ -107,9 +109,9 @@ Para parar tudo:
 docker compose down
 ```
 
-> Sempre que o **código do backend** mudar (arquivos `.py`) ou o **Dockerfile** mudar, é preciso reconstruir a imagem:
+> Sempre que o **código do backend** mudar (arquivos `.py`) ou o **Dockerfile**/`docker-compose.yml` mudar, é preciso reconstruir a imagem:
 > ```bash
-> docker compose down && docker compose up --build
+> docker compose down && docker compose up -d --build
 > ```
 > Se só uma variável do `.env` mudou, `docker compose down && docker compose up -d` já basta (não precisa `--build`).
 
@@ -187,13 +189,16 @@ face_recognition/
 │   └── lib/
 │       └── api.ts                # camada de comunicação com o backend
 ├── database/
-│   └── scriptBancoDados.sql      # estrutura do banco
+│   ├── 01_schema_base.sql        # tabelas principais
+│   └── 02_auth_biodoc.sql        # autenticação + campos da integração Biodoc
 ├── .env                          # segredos reais (NÃO versionado)
 ├── .env.example                  # modelo do .env (esse sim vai pro Git)
 ├── docker-compose.yml
 ├── Dockerfile.backend
 └── requirements.txt
 ```
+
+> Os dois arquivos em `database/` são executados **nessa ordem** pelo Postgres (ordem alfabética), só na primeira inicialização de um volume vazio. `02_auth_biodoc.sql` é idempotente — pode ser rodado de novo manualmente a qualquer momento sem risco, caso precise sincronizar um banco já existente.
 
 ---
 
@@ -230,7 +235,7 @@ A maior parte da configuração fica fixa no `docker-compose.yml`. Os dois valor
 | `JWT_SECRET` | `.env` | Chave que assina os tokens de login | — (ver `.env`, chave aleatória) |
 | `DB_HOST` | `docker-compose.yml` | Host do banco | `db` |
 | `DB_PORT` | `docker-compose.yml` | Porta do banco | `5432` |
-| `DB_NAME` | `docker-compose.yml` | Nome do banco (backend) | `health-track-oficial` |
+| `DB_NAME` / `POSTGRES_DB` | `docker-compose.yml` | Nome do banco (igual nos dois serviços) | `health-track-oficial` |
 | `DB_USER` | `docker-compose.yml` | Usuário do banco | `postgres` |
 | `JWT_EXPIRE_HOURS` | `docker-compose.yml` | Validade do token (horas) | `8` |
 | `LOGIN_MAX_TENTATIVAS` | `docker-compose.yml` | Tentativas antes do bloqueio | `5` |
@@ -313,9 +318,6 @@ docker cp <origem> healthtrack-api:/app/fotos/<pasta_pessoa>
 ```
 **Para resolver de vez**, falta (documentado em `MIGRACAO_CAMINHOS.md`): reescrever o motor numa versão sem interface gráfica (headless), containerizá-lo com suporte a GPU (NVIDIA Container Toolkit), e então ele e o backend passam a compartilhar os mesmos volumes nomeados de verdade.
 
-### 🟡 Nomes de banco divergentes no `docker-compose.yml`
-O serviço `db` cria o Postgres com `POSTGRES_DB: health-track-supervisorio`, mas o `backend` se conecta em `DB_NAME: health-track-oficial` — nomes diferentes. Não quebra nada hoje porque o volume do banco já existe (criado uma vez, no passado, com o nome que o backend espera) e `POSTGRES_DB` só tem efeito na primeira inicialização de um volume vazio. **Risco:** se o volume for apagado (`docker compose down -v`) e recriado do zero, o backend não vai encontrar o banco `health-track-oficial`. Vale corrigir os dois nomes para o mesmo valor.
-
 ### 🟡 Encoding de acentos
 Nomes com acento gravados diretamente via terminal (cmd/psql) podem ficar corrompidos e quebrar a leitura do motor. Cadastros feitos pela interface web aparentam estar corretos — pendente de confirmação com um teste dedicado.
 
@@ -331,6 +333,12 @@ A definir com a TI da Unimed:
 
 ### "Não foi possível conectar ao servidor"
 O backend não está rodando. Suba com `docker compose up -d` e confira `docker compose logs backend`.
+
+### `psycopg2.errors.UndefinedTable: relation "sch_supervisorio.tb_usuario" does not exist`
+Banco inicializado com uma versão antiga do projeto, sem os arquivos `database/01_schema_base.sql` + `02_auth_biodoc.sql` atuais. Se o volume do banco ainda não tem dado importante, o mais simples é `docker compose down -v && docker compose up -d --build` (recria do zero, certo). Se já tem dado real, rode o complemento manualmente sem apagar nada:
+```bash
+docker compose exec db psql -U postgres -d health-track-oficial -f /docker-entrypoint-initdb.d/02_auth_biodoc.sql
+```
 
 ### Erro `ImportError: libGL.so.1: cannot open shared object file`
 Faltam bibliotecas de sistema que o `opencv-python` precisa (usadas no recorte de rosto da Biodoc). Já corrigido no `Dockerfile.backend` atual — se aparecer de novo após atualizar dependências, reconstrua sem cache:
@@ -378,7 +386,7 @@ pip install -r requirements.txt
 
 Este sistema processa **dados biométricos e de saúde** de pacientes reais, protegidos pela LGPD. Ao trabalhar com backups ou fotos:
 
-- Nunca versione dados reais no Git
+- Nunca versione dados reais no Git (`data/`, `videomarcacoes/` já estão no `.gitignore`)
 - Nunca versione o arquivo `.env` (senhas e chaves reais) — só o `.env.example`
 - Não compartilhe backups fora do ambiente autorizado
 - Remova cópias locais após os testes

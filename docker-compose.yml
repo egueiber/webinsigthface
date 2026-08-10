@@ -6,14 +6,23 @@ services:
     container_name: healthtrack-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: health-track-supervisorio
+      # Nome unico do banco. Antes havia divergencia entre este valor e o
+      # DB_NAME do backend (health-track-supervisorio vs health-track-oficial):
+      # nao quebrava em maquinas antigas porque o volume ja existia com esse
+      # nome, mas quebrava direto numa maquina nova. Os dois agora sao iguais.
+      POSTGRES_DB: health-track-oficial
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: "${DB_PASSWORD}"
     ports:
       - "5432:5432"          # acessível em localhost:5432 na sua máquina
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/scriptBancoDados.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      # Monta a PASTA inteira: o Postgres roda todo arquivo .sql aqui dentro,
+      # em ordem alfabetica, na primeira vez que o volume e inicializado
+      # (volume vazio). 01_schema_base.sql cria as tabelas originais;
+      # 02_auth_biodoc.sql adiciona autenticacao + integracao Biodoc
+      # (idempotente — repetir nao quebra nada).
+      - ./database:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
