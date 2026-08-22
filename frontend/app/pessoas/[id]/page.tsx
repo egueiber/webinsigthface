@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { getPessoa, createPessoa, updatePessoa, getFotosPessoa, uploadFotoPessoa, deleteFotoPessoa, vincularBiodoc } from "@/lib/api";
+import { getPessoa, createPessoa, updatePessoa, getFotosPessoa, uploadFotoPessoa, deleteFotoPessoa, vincularBiodoc, consultarBiodoc } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +30,7 @@ export default function PessoaFormPage() {
   const [loading,      setLoading]      = useState(false);
   const [uploading,    setUploading]    = useState(false);
   const [buscandoBio,  setBuscandoBio]  = useState(false);
+  const [consultandoNome, setConsultandoNome] = useState(false);
   const [error,        setError]        = useState("");
 
   useEffect(() => {
@@ -74,6 +75,26 @@ export default function PessoaFormPage() {
   }
 
   // ── Biodoc ────────────────────────────────────────────────────────────────
+  // Ao sair do campo carteirinha, consulta a Biodoc (sem salvar nada) e
+  // preenche o nome automaticamente. Não bloqueia o cadastro se falhar —
+  // é uma conveniência opcional, a pessoa pode digitar o nome na mão.
+  async function preencherNomeDaBiodoc() {
+    const numero = carteirinha.trim();
+    if (numero.length < 5) return;
+    setConsultandoNome(true);
+    try {
+      const info = await consultarBiodoc(numero);
+      if (info.name) {
+        setNome(info.name);
+        toast.success(`Nome preenchido a partir da Biodoc: ${info.name}`);
+      }
+    } catch {
+      // Carteirinha não encontrada ou Biodoc fora do ar: falha silenciosa.
+    } finally {
+      setConsultandoNome(false);
+    }
+  }
+
   async function buscarFotoBiodoc() {
     if (!carteirinha.trim()) { toast.warning("Informe o número da carteirinha primeiro."); return; }
     if (!pid) { toast.warning("Salve os dados cadastrais antes de buscar a foto."); return; }
@@ -131,17 +152,20 @@ export default function PessoaFormPage() {
         <CardHeader><CardTitle className="text-base">Dados Cadastrais</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
+            <Label className="flex items-center gap-1.5"><IdCard className="h-3.5 w-3.5" />Carteirinha (Biodoc)</Label>
+            <Input value={carteirinha} onChange={e => setCarteirinha(e.target.value)} onBlur={preencherNomeDaBiodoc}
+              placeholder="Número da carteirinha do beneficiário" className="font-mono" />
+            <p className="text-xs text-zinc-400">
+              {consultandoNome ? "Consultando nome na Biodoc..." : "Usada para buscar a foto biométrica cadastrada na Biodoc. Ao sair do campo, o nome é preenchido automaticamente."}
+            </p>
+          </div>
+          <div className="space-y-1.5">
             <Label>Nome Completo <span className="text-red-500">*</span></Label>
             <Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Ex: João da Silva" />
           </div>
           <div className="space-y-1.5">
             <Label>Documento <span className="text-red-500">*</span></Label>
             <Input value={documento} onChange={e => setDocumento(e.target.value)} placeholder="CPF, RG ou matrícula" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="flex items-center gap-1.5"><IdCard className="h-3.5 w-3.5" />Carteirinha (Biodoc)</Label>
-            <Input value={carteirinha} onChange={e => setCarteirinha(e.target.value)} placeholder="Número da carteirinha do beneficiário" className="font-mono" />
-            <p className="text-xs text-zinc-400">Usada para buscar a foto biométrica cadastrada na Biodoc.</p>
           </div>
           <div className="flex gap-2">
             <Button onClick={salvar} disabled={loading}>

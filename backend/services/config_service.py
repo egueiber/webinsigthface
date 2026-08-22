@@ -60,7 +60,8 @@ def get_parameter_by_id(param_id: int):
                "caminhoVideoAProcessar", "caminhoVideoProcessados",
                "caminhoVideoMarcacoes", "intevalorFrames", "escalaImagem",
                "modeloDeteccao", "toleranciaReconhecimento", "gerarvideomarcacoes",
-               "finalizaraoidentificartodos", biodocapiurl, biodocapitoken
+               "finalizaraoidentificartodos", biodocapiurl, biodocapitoken,
+               biodocultimosincronismo
         FROM sch_supervisorio.tb_parametro WHERE "idParametro" = %s
     """
     conn = get_db_connection()
@@ -84,7 +85,9 @@ def get_parameter_by_id(param_id: int):
                     "generate_markers": result[11],
                     "finish_when_all_identified": result[12],
                     "biodoc_api_url": result[13] or "",
-                    "biodoc_api_token": result[14] or ""
+                    "biodoc_api_token": result[14] or "",
+                    # Somente leitura: escrito pela sincronização automática, exibido no form.
+                    "biodoc_last_sync": result[15].isoformat() if result[15] else None
                 }
             return None
     finally:

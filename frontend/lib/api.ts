@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 function traduzErro(detail: string): string {
   const d = String(detail);
@@ -163,6 +163,12 @@ export const deleteFotoPessoa = (id: number, filename: string) =>
 export const vincularBiodoc = (personId: number, idCard: string) =>
   request<{ message: string; filename: string; biodoc_name?: string; photos_folder: string }>(
     `/biodoc/vincular/${personId}${qs({ id_card: idCard })}`, { method: "POST" }
+  );
+// Consulta a Biodoc pela carteirinha SEM salvar nada — usada para pré-preencher
+// o nome ao digitar a carteirinha, antes mesmo de a pessoa existir no sistema.
+export const consultarBiodoc = (idCard: string) =>
+  request<{ status: number; status_descricao: string; name: string; tem_imagem: boolean; release_biometric: boolean }>(
+    `/biodoc/consultar/${encodeURIComponent(idCard)}`
   );
 
 // Localizações

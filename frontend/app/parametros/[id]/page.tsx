@@ -34,6 +34,8 @@ export default function ParametroFormPage() {
   const [carregando, setCarregando] = useState(!isNew);
   const [error,   setError]   = useState("");
   const [souAdmin, setSouAdmin] = useState(false);
+  // Só leitura: escrito pela sincronização automática, apenas exibido aqui.
+  const [ultimoSync, setUltimoSync] = useState<string | null>(null);
 
   useEffect(() => {
     setSouAdmin(getUsuarioLocal()?.papel === "admin");
@@ -63,6 +65,7 @@ export default function ParametroFormPage() {
             biodoc_api_url:     data.biodoc_api_url ?? "",
             biodoc_api_token:   data.biodoc_api_token ?? "",
           });
+          setUltimoSync(data.biodoc_last_sync ?? null);
         })
         .catch(e => setError(String(e.message ?? e)))
         .finally(() => setCarregando(false));
@@ -220,6 +223,13 @@ export default function ParametroFormPage() {
             <p className="text-xs text-zinc-400">
               Usado para buscar fotos biométricas dos beneficiários. Fornecido pela Biodoc à Unimed.
             </p>
+          </div>
+          <div className="space-y-1">
+            <Label>Última sincronização</Label>
+            <p className="text-sm text-zinc-700 font-mono">
+              {ultimoSync ? new Date(ultimoSync).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "medium" }) : "Ainda não sincronizado"}
+            </p>
+            <p className="text-xs text-zinc-400">Atualizada automaticamente pelo processo de sincronização.</p>
           </div>
         </CardContent>
       </Card>

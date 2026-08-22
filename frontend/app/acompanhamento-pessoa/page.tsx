@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { getPessoas, getPersonPath } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, Search, X, Check } from "lucide-react";
+import { AlertCircle, Search, X, Check, Maximize2 } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 function today()     { return new Date().toISOString().slice(0, 10); }
@@ -51,6 +52,7 @@ function temFrame(p: Passo) {
 }
 
 export default function AcompanhamentoPessoaPage() {
+  const searchParams = useSearchParams();
   const [pessoaId,   setPessoaId]   = useState("");
   const [pessoaNome, setPessoaNome] = useState("");
   const [dataInicio, setDataInicio] = useState(yesterday());
@@ -61,6 +63,7 @@ export default function AcompanhamentoPessoaPage() {
   const [error,      setError]      = useState("");
   const [frameModal, setFrameModal] = useState<Passo | null>(null);
   const [frameErro,  setFrameErro]  = useState("");
+  const [frameCheio, setFrameCheio] = useState(false);
 
   // Busca de pessoa (autocomplete)
   const [termo,       setTermo]       = useState("");
@@ -109,6 +112,31 @@ export default function AcompanhamentoPessoaPage() {
     setPessoaId(""); setPessoaNome(""); setTermo(""); setResultados([]);
   }
 
+  // Chegando do Dashboard (ou outro link) com ?pessoa=ID&nome=Fulano:
+  // pré-seleciona a pessoa e já dispara o caminhamento, sem o usuário
+  // precisar buscar de novo. Roda uma vez, na montagem.
+  useEffect(() => {
+    const pid = searchParams.get("pessoa");
+    if (!pid) return;
+    const pnome = searchParams.get("nome") ?? "";
+    setPessoaId(pid);
+    setPessoaNome(pnome);
+    setTermo(pnome);
+    (async () => {
+      setLoading(true); setError(""); setCaminho([]);
+      try {
+        const dados = await getPersonPath(Number(pid), dataInicio, dataFim, identified);
+        if (!dados || dados.length === 0) {
+          setError("Nenhum registro encontrado para os filtros selecionados.");
+          return;
+        }
+        setCaminho(dados);
+      } catch (e: any) { setError(String(e.message ?? e)); }
+      finally { setLoading(false); }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function buscar() {
     if (!pessoaId) { setError("Selecione uma pessoa."); return; }
     setLoading(true); setError(""); setCaminho([]);
@@ -122,8 +150,17 @@ export default function AcompanhamentoPessoaPage() {
 
   function abrirFrame(p: Passo) {
     setFrameErro("");
+    setFrameCheio(false);
     setFrameModal(p);
   }
+
+  // Fecha a tela cheia com Esc (sem fechar o modal inteiro).
+  useEffect(() => {
+    if (!frameCheio) return;
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setFrameCheio(false); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [frameCheio]);
 
   const camerasUnicas = caminho.reduce((acc, p) => {
     const key = `${p.andar}-${p.camera}`;
@@ -340,12 +377,24 @@ export default function AcompanhamentoPessoaPage() {
                   <AlertDescription className="text-xs">{frameErro}</AlertDescription>
                 </Alert>
               ) : (
-                <img
-                  src={frameUrl(frameModal)}
-                  alt={`Frame ${frameModal.camera}`}
-                  className="w-full rounded-lg border border-zinc-200"
-                  onError={() => setFrameErro("Não foi possível carregar o frame. O arquivo pode não estar disponível no servidor.")}
-                />
+                <div className="relative group">
+                  <img
+                    src={frameUrl(frameModal)}
+                    alt={`Frame ${frameModal.camera}`}
+                    className="w-full rounded-lg border border-zinc-200 cursor-zoom-in"
+                    onClick={() => setFrameCheio(true)}
+                    onError={() => setFrameErro("Não foi possível carregar o frame. O arquivo pode não estar disponível no servidor.")}
+                  />
+                  {/* Botão translúcido de zoom (tela cheia) */}
+                  <button
+                    type="button"
+                    onClick={() => setFrameCheio(true)}
+                    title="Ampliar (tela cheia)"
+                    className="absolute top-2 right-2 flex items-center justify-center h-9 w-9 rounded-full bg-black/40 text-white backdrop-blur-sm hover:bg-black/60 transition-colors"
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                  </button>
+                </div>
               )}
               <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
                 <span><strong>Câmera:</strong> {frameModal.camera}</span>
@@ -357,6 +406,28 @@ export default function AcompanhamentoPessoaPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Overlay de tela cheia: clicar em qualquer lugar (ou Esc) fecha */}
+      {frameCheio && frameModal && !frameErro && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={() => setFrameCheio(false)}
+        >
+          <img
+            src={frameUrl(frameModal)}
+            alt={`Frame ${frameModal.camera}`}
+            className="max-w-full max-h-full object-contain select-none"
+          />
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setFrameCheio(false); }}
+            title="Fechar (Esc)"
+            className="absolute top-4 right-4 flex items-center justify-center h-11 w-11 rounded-full bg-white/15 text-white backdrop-blur-sm hover:bg-white/30 transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

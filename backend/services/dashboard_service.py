@@ -120,7 +120,11 @@ def get_delayed_persons(start_date: str, end_date: str, location_id: int = None)
             p."idPessoa",
             p."nomePessoa",
             (CURRENT_TIMESTAMP - pe.datahoraprevistasaida) as delay_time,
-            COALESCE(ul.nomelocalizacao, 'Unknown') as last_location
+            COALESCE(ul.nomelocalizacao, 'Unknown') as last_location,
+            pe.idpessoaevento,
+            pe.idevento,
+            pe.datahoraentrada,
+            pe.datahoraprevistasaida
         FROM sch_supervisorio.tb_pessoa p
         JOIN sch_supervisorio.tb_pessoa_evento pe ON p."idPessoa" = pe.idpessoa
         LEFT JOIN LastLocation ul ON p."idPessoa" = ul."idPessoa" AND ul.rn = 1
@@ -143,7 +147,7 @@ def get_delayed_persons(start_date: str, end_date: str, location_id: int = None)
         with conn.cursor() as cur:
             cur.execute(sql, tuple(params))
             rows = cur.fetchall()
-            for person_id, name, delay_delta, last_location in rows:
+            for person_id, name, delay_delta, last_location, evento_id, tipo_evento_id, entrada, saida_prevista in rows:
                 total_seconds = int(delay_delta.total_seconds())
                 hours, remainder = divmod(total_seconds, 3600)
                 minutes, seconds = divmod(remainder, 60)
@@ -152,7 +156,12 @@ def get_delayed_persons(start_date: str, end_date: str, location_id: int = None)
                     "id": person_id,
                     "name": name,
                     "delay_time": delay_formatted,
-                    "last_location": last_location
+                    "last_location": last_location,
+                    # Dados do evento em aberto, usados para encerrar direto do Dashboard.
+                    "evento_id": evento_id,
+                    "tipo_evento_id": tipo_evento_id,
+                    "entrada": entrada.isoformat() if entrada else None,
+                    "saida_prevista": saida_prevista.isoformat() if saida_prevista else None,
                 })
 
     except Exception as e:

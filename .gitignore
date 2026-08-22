@@ -17,3 +17,5 @@ backend/services/__pycache__/
 # Dados reais e sensíveis (biometria, vídeo de marcação, LGPD) — nunca versionar.
 videomarcacoes/
 data/
+
+frontend/.env.local

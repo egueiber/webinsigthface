@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { getDashboardIndicators, getDelayedPersons, getLocalizacoes } from "@/lib/api";
+import Link from "next/link";
+import { getDashboardIndicators, getDelayedPersons, getLocalizacoes, updatePessoaEvento } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,11 +9,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Users, Clock, UserCheck, AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Users, Clock, UserCheck, AlertCircle, LogOut } from "lucide-react";
+import { toast } from "sonner";
 
 function parseLoc(l: any) {
   if (Array.isArray(l)) return { id: l[0], nome: l[1] };
   return { id: l.idlocalizacao ?? l.id, nome: l.nomelocalizacao ?? l.nome ?? l.name };
+}
+
+function pad(n: number) { return String(n).padStart(2, "0"); }
+// Hora local "crua", sem passar por UTC (o banco usa timestamp without time zone).
+function toLocal(value: string | Date | null): string {
+  if (!value) return "";
+  const d = typeof value === "string" ? new Date(value) : value;
+  if (isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function toISO(val: string): string | null { return val ? `${val}:00` : null; }
+function fmt(iso: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
 export default function DashboardPage() {
@@ -27,6 +44,12 @@ export default function DashboardPage() {
   const [atrasados,     setAtrasados]     = useState<any[]>([]);
   const [loading,       setLoading]       = useState(false);
   const [error,         setError]         = useState("");
+
+  // Modal de encerramento (mesma lógica da tela de Pessoas)
+  const [encerrando,  setEncerrando]  = useState<any>(null);
+  const [modoSaida,   setModoSaida]   = useState<"agora" | "manual">("agora");
+  const [saidaManual, setSaidaManual] = useState("");
+  const [salvandoEnc, setSalvandoEnc] = useState(false);
 
   useEffect(() => {
     getLocalizacoes()
@@ -52,12 +75,47 @@ export default function DashboardPage() {
     }
   }
 
-  // Backend retorna: total_served, average_time, total_present
+  function abrirEncerrar(pessoa: any) {
+    if (!pessoa.evento_id) return;
+    setEncerrando(pessoa);
+    setModoSaida("agora");
+    setSaidaManual(toLocal(new Date()));
+  }
+
+  async function confirmarEncerrar() {
+    if (!encerrando) return;
+    const saida = modoSaida === "agora" ? toISO(toLocal(new Date())) : toISO(saidaManual);
+    if (!saida) { toast.error("Informe a data/hora de saída."); return; }
+    if (encerrando.entrada && new Date(saida) < new Date(encerrando.entrada)) {
+      toast.error("A saída não pode ser anterior à entrada.");
+      return;
+    }
+    setSalvandoEnc(true);
+    try {
+      // O UPDATE do backend reescreve todos os campos, então os originais
+      // precisam ser reenviados junto — senão entrada/saída prevista somem.
+      await updatePessoaEvento(encerrando.evento_id, {
+        person_id: encerrando.id,
+        event_id: encerrando.tipo_evento_id,
+        entry_datetime: encerrando.entrada,
+        expected_exit_datetime: encerrando.saida_prevista ?? undefined,
+        actual_exit_datetime: saida,
+        event_cancelled: false,
+      });
+      toast.success(`Entrada de "${encerrando.name ?? encerrando.nome}" encerrada.`);
+      setEncerrando(null);
+      buscar();
+    } catch (e: any) { toast.error(String(e.message ?? e)); }
+    finally { setSalvandoEnc(false); }
+  }
+
   const stats = [
     { label: "Pessoas Atendidas",       value: indicadores?.total_served    ?? indicadores?.total_atendidos  ?? "—", icon: UserCheck },
     { label: "Tempo Médio Atendimento", value: indicadores?.average_time    ?? indicadores?.tempo_medio      ?? "—", icon: Clock     },
     { label: "Pessoas Presentes",       value: indicadores?.total_present   ?? indicadores?.total_presentes  ?? "—", icon: Users     },
   ];
+
+  const dtClass = "flex h-9 w-full rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-900";
 
   return (
     <div className="space-y-6">
@@ -125,24 +183,91 @@ export default function DashboardPage() {
                 <TableHead>Nome</TableHead>
                 <TableHead className="text-center">Tempo de Atraso</TableHead>
                 <TableHead className="text-center">Última Localização</TableHead>
+                <TableHead className="text-center w-24">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={3} className="text-center py-10 text-zinc-400">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} className="text-center py-10 text-zinc-400">Carregando...</TableCell></TableRow>
               ) : atrasados.length === 0 ? (
-                <TableRow><TableCell colSpan={3} className="text-center py-10 text-zinc-400">Nenhuma pessoa com atraso no período.</TableCell></TableRow>
-              ) : atrasados.map((p: any, i: number) => (
-                <TableRow key={i}>
-                  <TableCell className="font-medium">{p.name ?? p.nome}</TableCell>
-                  <TableCell className="text-center text-orange-600 font-mono">{p.delay_time ?? p.tempo_atraso}</TableCell>
-                  <TableCell className="text-center">{p.last_location ?? p.localizacao}</TableCell>
-                </TableRow>
-              ))}
+                <TableRow><TableCell colSpan={4} className="text-center py-10 text-zinc-400">Nenhuma pessoa com atraso no período.</TableCell></TableRow>
+              ) : atrasados.map((p: any, i: number) => {
+                const nome = p.name ?? p.nome;
+                return (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium">
+                      {p.id ? (
+                        <Link
+                          href={`/acompanhamento-pessoa?pessoa=${p.id}&nome=${encodeURIComponent(nome ?? "")}`}
+                          className="text-emerald-700 hover:underline"
+                        >
+                          {nome}
+                        </Link>
+                      ) : nome}
+                    </TableCell>
+                    <TableCell className="text-center text-orange-600 font-mono">{p.delay_time ?? p.tempo_atraso}</TableCell>
+                    <TableCell className="text-center">{p.last_location ?? p.localizacao}</TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost" size="icon"
+                        disabled={!p.evento_id}
+                        onClick={() => abrirEncerrar(p)}
+                        title={p.evento_id ? "Encerrar entrada" : "Sem evento em andamento"}
+                      >
+                        <LogOut className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={!!encerrando} onOpenChange={o => !o && setEncerrando(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Encerrar entrada</DialogTitle>
+            <DialogDescription>
+              {encerrando && (
+                <>
+                  <strong>{encerrando.name ?? encerrando.nome}</strong>
+                  <br />
+                  <span className="text-xs">Entrada: {fmt(encerrando.entrada)}</span>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer text-sm">
+                <input type="radio" checked={modoSaida === "agora"} onChange={() => setModoSaida("agora")} />
+                Usar data/hora atual
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-sm">
+                <input type="radio" checked={modoSaida === "manual"} onChange={() => setModoSaida("manual")} />
+                Definir manualmente
+              </label>
+            </div>
+
+            {modoSaida === "manual" && (
+              <div className="space-y-1.5">
+                <Label>Data/hora de saída</Label>
+                <input type="datetime-local" value={saidaManual} onChange={e => setSaidaManual(e.target.value)} className={dtClass} />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEncerrando(null)}>Cancelar</Button>
+            <Button onClick={confirmarEncerrar} disabled={salvandoEnc}>
+              {salvandoEnc ? "Encerrando..." : "Encerrar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
