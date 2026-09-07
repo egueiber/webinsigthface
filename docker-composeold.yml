@@ -1,0 +1,116 @@
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    container_name: healthtrack-db
+    restart: unless-stopped
+    environment:
+      # Nome unico do banco. Antes havia divergencia entre este valor e o
+      # DB_NAME do backend (health-track-supervisorio vs health-track-oficial):
+      # nao quebrava em maquinas antigas porque o volume ja existia com esse
+      # nome, mas quebrava direto numa maquina nova. Os dois agora sao iguais.
+      POSTGRES_DB: health-track-oficial
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+    ports:
+      - "5432:5432"          # acessível em localhost:5432 na sua máquina
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Monta a PASTA inteira: o Postgres roda todo arquivo .sql aqui dentro,
+      # em ordem alfabetica, na primeira vez que o volume e inicializado
+      # (volume vazio). 01_schema_base.sql cria as tabelas originais;
+      # 02_auth_biodoc.sql adiciona autenticacao + integracao Biodoc
+      # (idempotente — repetir nao quebra nada).
+      - ./database:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend FastAPI ─────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: healthtrack-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"          # frontend local acessa http://localhost:8000
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: health-track-oficial
+      DB_USER: postgres
+      DB_PASS: "${DB_PASSWORD}"
+
+      # Caminhos DENTRO do container. Devem ser IGUAIS aos cadastrados
+      # em Parametros (tb_parametro), pois o motor le esses valores do banco.
+      FOTOS_DIR: /app/fotos
+      MAPAS_DIR: /app/mapas
+      VIDEOMARCACOES_DIR: /app/videomarcacoes
+
+      # Autenticacao — valores reais ficam no .env (nao versionado).
+      JWT_SECRET: "${JWT_SECRET}"
+      JWT_EXPIRE_HOURS: "8"
+      LOGIN_MAX_TENTATIVAS: "5"
+      LOGIN_JANELA_SEGUNDOS: "300"
+      LOGIN_BLOQUEIO_SEGUNDOS: "300"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Codigo-fonte (desenvolvimento). Em producao, prefira copiar no build.
+      - .:/app
+      # Pastas de dados COMPARTILHADAS com o motor.
+      # Os mesmos volumes devem ser montados no servico do motor.
+      - healthtrack_fotos:/app/fotos
+      - healthtrack_mapas:/app/mapas
+      - healthtrack_videomarcacoes:/app/videomarcacoes
+      - healthtrack_videos_processar:/app/videos_a_processar
+      - healthtrack_videos_processados:/app/videos_processados
+
+  # ── Motor InsightFace (descomente quando for rodar o motor em Docker) ───────
+  # Requisitos no servidor:
+  #   - Driver NVIDIA instalado
+  #   - NVIDIA Container Toolkit (para o container enxergar a GPU)
+  #
+  # motor:
+  #   build:
+  #     context: ./motor              # ajuste para a pasta do insightfacelib
+  #     dockerfile: Dockerfile.motor
+  #   container_name: healthtrack-motor
+  #   restart: unless-stopped
+  #   environment:
+  #     DB_HOST: db
+  #     DB_PORT: "5432"
+  #     DB_NAME: health-track-oficial
+  #     DB_USER: postgres
+  #     DB_PASS: "${DB_PASSWORD}"
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   volumes:
+  #     # MESMOS volumes do backend: e assim que o motor enxerga as fotos
+  #     # cadastradas pela web, e a web enxerga os frames gerados pelo motor.
+  #     - healthtrack_fotos:/app/fotos
+  #     - healthtrack_mapas:/app/mapas
+  #     - healthtrack_videomarcacoes:/app/videomarcacoes
+  #     - healthtrack_videos_processar:/app/videos_a_processar
+  #     - healthtrack_videos_processados:/app/videos_processados
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+
+volumes:
+  postgres_data:
+  healthtrack_fotos:
+  healthtrack_mapas:
+  healthtrack_videomarcacoes:
+  healthtrack_videos_processar:
+  healthtrack_videos_processados:

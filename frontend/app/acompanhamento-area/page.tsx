@@ -1,13 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
-import { getLocalizacoes, getAreaTracking } from "@/lib/api";
+import { getLocalizacoes, getAreaTracking, getToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertCircle, X } from "lucide-react";
+import { AlertCircle, X, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 function today() { return new Date().toISOString().slice(0, 10); }
@@ -60,6 +60,13 @@ export default function AcompanhamentoAreaPage() {
   const [error,      setError]      = useState("");
   const [frameModal, setFrameModal] = useState<Deteccao | null>(null);
   const [frameErro,  setFrameErro]  = useState("");
+  const [mapaUrl,    setMapaUrl]    = useState<string | null>(null);
+
+  // Estados de Zoom/Pan para o modal
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     getLocalizacoes().then(locs => {
@@ -70,6 +77,23 @@ export default function AcompanhamentoAreaPage() {
       if (parsed[0]) { setLocId(String(parsed[0].id)); setLocNome(parsed[0].nome); }
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!locId) {
+      setMapaUrl(null);
+      return;
+    }
+    const token = getToken();
+    fetch(`${API}/locations/${locId}/mapa`, {
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error("Sem mapa");
+        return res.blob();
+      })
+      .then(blob => setMapaUrl(URL.createObjectURL(blob)))
+      .catch(() => setMapaUrl(null));
+  }, [locId]);
 
   async function buscar() {
     if (!locId) { setError("Selecione uma localização."); return; }
@@ -130,7 +154,11 @@ export default function AcompanhamentoAreaPage() {
               <CardContent>
                 <div className="relative w-full rounded-lg border-2 border-dashed border-zinc-200 bg-zinc-50" style={{height:340}}
                   onClick={() => { setTooltip(null); setSelecionada(null); }}>
-                  <div className="absolute inset-0 opacity-10" style={{backgroundImage:"linear-gradient(#94a3b8 1px,transparent 1px),linear-gradient(90deg,#94a3b8 1px,transparent 1px)",backgroundSize:"40px 40px"}} />
+                  {mapaUrl ? (
+                    <div className="absolute inset-0 bg-contain bg-center bg-no-repeat rounded-lg opacity-80" style={{backgroundImage: `url(${mapaUrl})`}} />
+                  ) : (
+                    <div className="absolute inset-0 opacity-10" style={{backgroundImage:"linear-gradient(#94a3b8 1px,transparent 1px),linear-gradient(90deg,#94a3b8 1px,transparent 1px)",backgroundSize:"40px 40px"}} />
+                  )}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <p className="text-zinc-200 text-4xl font-bold select-none">{locNome}</p>
                   </div>
@@ -225,8 +253,16 @@ export default function AcompanhamentoAreaPage() {
       )}
 
       {/* Modal de frame de detecção */}
-      <Dialog open={!!frameModal} onOpenChange={() => { setFrameModal(null); setFrameErro(""); }}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={!!frameModal} onOpenChange={(open) => { 
+        if (!open) { setFrameModal(null); setFrameErro(""); setZoom(1); setPan({x:0, y:0}); }
+      }}>
+        <DialogContent 
+          className="select-none" 
+          style={{ 
+            maxWidth: `min(90vw, ${672 + (zoom - 1) * 300}px)`, 
+            transition: 'max-width 0.15s ease-out' 
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Frame de Detecção — {frameModal?.nome}</DialogTitle>
           </DialogHeader>
@@ -238,12 +274,47 @@ export default function AcompanhamentoAreaPage() {
                   <AlertDescription className="text-xs">{frameErro}</AlertDescription>
                 </Alert>
               ) : (
-                <img
-                  src={frameUrl(frameModal)}
-                  alt={`Frame de ${frameModal.nome}`}
-                  className="w-full rounded-lg border border-zinc-200"
-                  onError={() => setFrameErro("Não foi possível carregar o frame. O arquivo pode não estar disponível no servidor.")}
-                />
+                <div className="relative group">
+                  <div 
+                    className="w-full rounded-lg border border-zinc-200 bg-black/5 overflow-hidden cursor-move touch-none"
+                    style={{
+                      height: `min(75vh, ${400 + (zoom - 1) * 200}px)`,
+                      transition: isDragging ? 'none' : 'height 0.15s ease-out'
+                    }}
+                    onWheel={(e) => {
+                      e.preventDefault();
+                      setZoom(z => Math.min(Math.max(1, z - e.deltaY * 0.01), 6));
+                    }}
+                    onMouseDown={(e) => {
+                      setIsDragging(true);
+                      setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+                    }}
+                    onMouseMove={(e) => {
+                      if (!isDragging) return;
+                      setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+                    }}
+                    onMouseUp={() => setIsDragging(false)}
+                    onMouseLeave={() => setIsDragging(false)}
+                  >
+                    <img
+                      src={frameUrl(frameModal)}
+                      alt={`Frame de ${frameModal.nome}`}
+                      className="w-full h-full object-contain pointer-events-none"
+                      style={{
+                        transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+                        transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+                        transformOrigin: 'center center'
+                      }}
+                      draggable={false}
+                      onError={() => setFrameErro("Não foi possível carregar o frame. O arquivo pode não estar disponível no servidor.")}
+                    />
+                  </div>
+                  <div className="absolute bottom-3 right-3 flex items-center bg-white/90 backdrop-blur-sm rounded-lg shadow-md border border-zinc-200 overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => setZoom(z => Math.min(z + 0.5, 6))} className="p-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 transition-colors" title="Aproximar"><ZoomIn size={18}/></button>
+                    <button onClick={() => setZoom(z => Math.max(z - 0.5, 1))} className="p-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 border-l border-zinc-200 transition-colors" title="Afastar"><ZoomOut size={18}/></button>
+                    <button onClick={() => { setZoom(1); setPan({x:0, y:0}); }} className="p-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 border-l border-zinc-200 transition-colors" title="Restaurar zoom"><RotateCcw size={18}/></button>
+                  </div>
+                </div>
               )}
               <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
                 <span><strong>Horário:</strong> {frameModal.horario}</span>

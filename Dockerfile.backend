@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copia requirements e remove pacotes incompatíveis com Linux
+# Copia requirements e remove pacotes incompatíveis com Linux e interface desktop
 COPY requirements.txt .
 RUN grep -v "dlib @ file:///" requirements.txt \
   | grep -v "tensorflow-intel" \
@@ -39,4 +39,5 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Comando de produção limpo (sem a flag --reload)
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]

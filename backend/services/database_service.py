@@ -155,7 +155,8 @@ def list_cameras(name_filter: str = ""):
 def get_camera_by_id(camera_id: int):
     sql = """
         SELECT "nomeCamera", idlocalizacao, 
-               "andarCamera", "nrsalaproximaCamera", notaparaignorar, notaidentificacao
+               "andarCamera", "nrsalaproximaCamera", notaparaignorar, notaidentificacao,
+               url_rtsp, processar_tempo_real
         FROM sch_supervisorio.tb_cameras WHERE "idCamera" = %s
     """
     conn = get_db_connection()
@@ -171,7 +172,9 @@ def get_camera_by_id(camera_id: int):
                     "floor": result[2],
                     "room_number": result[3],
                     "ignore_threshold": result[4],
-                    "identification_threshold": result[5]
+                    "identification_threshold": result[5],
+                    "url_rtsp": result[6] if len(result) > 6 else None,
+                    "processar_tempo_real": result[7] if len(result) > 7 else False
                 }
     finally:
         conn.close()
@@ -179,7 +182,8 @@ def get_camera_by_id(camera_id: int):
 
 
 def save_camera(name: str, location_id: int, floor: int, room_number: int, 
-                ignore_threshold: float, identification_threshold: float, camera_id: int = None):
+                ignore_threshold: float, identification_threshold: float, camera_id: int = None,
+                url_rtsp: str = None, processar_tempo_real: bool = False):
     """
     Salva (INSERT ou UPDATE) uma câmera no banco.
     A lógica de "if camera_id:" é o que diferencia a criação da edição.
@@ -204,18 +208,19 @@ def save_camera(name: str, location_id: int, floor: int, room_number: int,
                 sql = """
                     UPDATE sch_supervisorio.tb_cameras
                     SET "nomeCamera" = %s, idlocalizacao = %s,
-                        "andarCamera" = %s, "nrsalaproximaCamera" = %s, notaparaignorar = %s, notaidentificacao = %s
+                        "andarCamera" = %s, "nrsalaproximaCamera" = %s, notaparaignorar = %s, notaidentificacao = %s,
+                        url_rtsp = %s, processar_tempo_real = %s
                     WHERE "idCamera" = %s
                 """
-                params = (name, location_id, floor, room_number, ignore_threshold, identification_threshold, camera_id)
+                params = (name, location_id, floor, room_number, ignore_threshold, identification_threshold, url_rtsp, processar_tempo_real, camera_id)
             else:
                 # --- MODO DE CRIAÇÃO (INSERT) ---
                 sql = """
                     INSERT INTO sch_supervisorio.tb_cameras
-                    ("nomeCamera", idlocalizacao, "andarCamera", "nrsalaproximaCamera", notaparaignorar, notaidentificacao)
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ("nomeCamera", idlocalizacao, "andarCamera", "nrsalaproximaCamera", notaparaignorar, notaidentificacao, url_rtsp, processar_tempo_real)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """
-                params = (name, location_id, floor, room_number, ignore_threshold, identification_threshold)
+                params = (name, location_id, floor, room_number, ignore_threshold, identification_threshold, url_rtsp, processar_tempo_real)
             
             cur.execute(sql, params)
         conn.commit()

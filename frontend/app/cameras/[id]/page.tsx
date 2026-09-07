@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Save, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -30,6 +31,8 @@ export default function CameraFormPage() {
   const [nrsala,            setNrsala]            = useState("0");
   const [notaIgnorar,       setNotaIgnorar]       = useState("0.7");
   const [notaIdentificacao, setNotaIdentificacao] = useState("0.7");
+  const [urlRtsp,           setUrlRtsp]           = useState("");
+  const [processarTempoReal,setProcessarTempoReal]= useState(false);
   const [localizacoes,      setLocalizacoes]      = useState<any[]>([]);
   const [loading,           setLoading]           = useState(false);
   const [error,             setError]             = useState("");
@@ -47,6 +50,8 @@ export default function CameraFormPage() {
         setNrsala(String(data.nrsalaproxima ?? data.room_number ?? 0));
         setNotaIgnorar(String(data.notaparaignorar ?? data.ignore_threshold ?? 0.7));
         setNotaIdentificacao(String(data.notaidentificacao ?? data.identification_threshold ?? 0.7));
+        setUrlRtsp(data.url_rtsp ?? "");
+        setProcessarTempoReal(data.processar_tempo_real ?? false);
       }).catch(e => setError(String(e.message ?? e)));
     }
   }, [id]);
@@ -65,6 +70,8 @@ export default function CameraFormPage() {
         nrsalaproxima: Number(nrsala),
         notaparaignorar: parseFloat(notaIgnorar),
         notaidentificacao: parseFloat(notaIdentificacao),
+        url_rtsp: urlRtsp,
+        processar_tempo_real: processarTempoReal,
       };
       if (isNew) await createCamera(payload);
       else await updateCamera(Number(id), payload);
@@ -130,6 +137,16 @@ export default function CameraFormPage() {
               <Label>Nota de Identificação <span className="text-xs text-zinc-400">(0.0 a 1.0)</span></Label>
               <Input type="number" step="0.05" value={notaIdentificacao} onChange={e => setNotaIdentificacao(e.target.value)} />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>URL RTSP</Label>
+            <Input value={urlRtsp} onChange={e => setUrlRtsp(e.target.value)} placeholder="Ex: rtsp://admin:senha@192.168.1.10:554/cam/realmonitor?channel=1&subtype=0" />
+          </div>
+
+          <div className="flex items-center space-x-2 pt-2">
+            <Checkbox id="processar_tempo_real" checked={processarTempoReal} onCheckedChange={(c) => setProcessarTempoReal(c === true)} />
+            <Label htmlFor="processar_tempo_real" className="cursor-pointer">Processar Tempo Real</Label>
           </div>
 
           <Button onClick={salvar} disabled={loading}>

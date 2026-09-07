@@ -26,10 +26,11 @@ def get_camera(camera_id: int):
 def create_camera(
     name: str, location_id: int,
     floor: int = 0, room_number: int = 0,
-    ignore_threshold: float = 0.7, identification_threshold: float = 0.7
+    ignore_threshold: float = 0.7, identification_threshold: float = 0.7,
+    url_rtsp: str = None, processar_tempo_real: bool = False
 ):
     try:
-        save_camera(name, location_id, floor, room_number, ignore_threshold, identification_threshold)
+        save_camera(name, location_id, floor, room_number, ignore_threshold, identification_threshold, None, url_rtsp, processar_tempo_real)
         return {"message": "Camera created successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -39,10 +40,11 @@ def create_camera(
 def update_camera(
     camera_id: int, name: str, location_id: int,
     floor: int = 0, room_number: int = 0,
-    ignore_threshold: float = 0.7, identification_threshold: float = 0.7
+    ignore_threshold: float = 0.7, identification_threshold: float = 0.7,
+    url_rtsp: str = None, processar_tempo_real: bool = False
 ):
     try:
-        save_camera(name, location_id, floor, room_number, ignore_threshold, identification_threshold, camera_id)
+        save_camera(name, location_id, floor, room_number, ignore_threshold, identification_threshold, camera_id, url_rtsp, processar_tempo_real)
         return {"message": "Camera updated successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -247,22 +247,28 @@ export const getCamera    = (id: number)  => request<any>(`/cameras/${id}`);
 export const createCamera = (data: {
   nome: string; idlocalizacao: number; andar?: number;
   nrsalaproxima?: number; notaparaignorar?: number; notaidentificacao?: number;
+  url_rtsp?: string; processar_tempo_real?: boolean;
 }) =>
   request<any>(`/cameras/${qs({
     name: data.nome, location_id: data.idlocalizacao,
     floor: data.andar ?? 0, room_number: data.nrsalaproxima ?? 0,
     ignore_threshold: data.notaparaignorar ?? 0.7,
     identification_threshold: data.notaidentificacao ?? 0.7,
+    url_rtsp: data.url_rtsp ?? "",
+    processar_tempo_real: data.processar_tempo_real ?? false,
   })}`, { method: "POST" });
 export const updateCamera = (id: number, data: {
   nome: string; idlocalizacao: number; andar?: number;
   nrsalaproxima?: number; notaparaignorar?: number; notaidentificacao?: number;
+  url_rtsp?: string; processar_tempo_real?: boolean;
 }) =>
   request<any>(`/cameras/${id}${qs({
     name: data.nome, location_id: data.idlocalizacao,
     floor: data.andar ?? 0, room_number: data.nrsalaproxima ?? 0,
     ignore_threshold: data.notaparaignorar ?? 0.7,
     identification_threshold: data.notaidentificacao ?? 0.7,
+    url_rtsp: data.url_rtsp ?? "",
+    processar_tempo_real: data.processar_tempo_real ?? false,
   })}`, { method: "PUT" });
 export const deleteCamera = (id: number) => request<any>(`/cameras/${id}`, { method: "DELETE" });
 
