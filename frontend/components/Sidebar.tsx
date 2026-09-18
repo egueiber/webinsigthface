@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Users, Camera, MapPin,
-  CalendarDays, Film, Settings, Map, UserSearch, UserCheck, LogOut, ShieldCheck,
+  CalendarDays, Film, Settings, Map, UserSearch, LogOut, ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getUsuarioLocal, logout } from "@/lib/api";
@@ -17,7 +17,6 @@ const navItems = [
   { label: "Localizações",       href: "/localizacoes",            icon: MapPin },
   { label: "Eventos",            href: "/eventos",                 icon: CalendarDays },
   { label: "Cenários",           href: "/cenarios",                icon: Film },
-  { label: "Pessoa — Eventos",   href: "/pessoa-eventos",          icon: UserCheck },
   { label: "Acomp. Área",        href: "/acompanhamento-area",     icon: Map },
   { label: "Acomp. Pessoa",      href: "/acompanhamento-pessoa",   icon: UserSearch },
 ];

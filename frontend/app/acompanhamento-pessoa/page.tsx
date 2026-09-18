@@ -11,10 +11,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, Search, X, Check, Maximize2 } from "lucide-react";
-
+import { FrameViewer } from "@/components/FrameViewer";
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 function today()     { return new Date().toISOString().slice(0, 10); }
 function yesterday() { const d = new Date(); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); }
+
+// Controle do tamanho da janela de frame (modal)
+const FRAME_MAX_VW = 95;      // largura quando 100% "maximizado"
+const FRAME_MAX_VH = 92;      // altura quando 100% "maximizado"
+const FRAME_BASE_SCALE = 70;  // janela inicia com 70% do maximizado
 
 interface Passo {
   ordem: number;
@@ -63,8 +68,9 @@ export default function AcompanhamentoPessoaPage() {
   const [error,      setError]      = useState("");
   const [frameModal, setFrameModal] = useState<Passo | null>(null);
   const [frameErro,  setFrameErro]  = useState("");
-  const [frameCheio, setFrameCheio] = useState(false);
-
+  // Tamanho/estado da janela de frame
+  const [frameScale, setFrameScale] = useState(FRAME_BASE_SCALE);
+  const [frameFullscreen, setFrameFullscreen] = useState(false);
   // Busca de pessoa (autocomplete)
   const [termo,       setTermo]       = useState("");
   const [resultados,  setResultados]  = useState<any[]>([]);
@@ -150,17 +156,10 @@ export default function AcompanhamentoPessoaPage() {
 
   function abrirFrame(p: Passo) {
     setFrameErro("");
-    setFrameCheio(false);
+    setFrameScale(FRAME_BASE_SCALE);
+    setFrameFullscreen(false);
     setFrameModal(p);
   }
-
-  // Fecha a tela cheia com Esc (sem fechar o modal inteiro).
-  useEffect(() => {
-    if (!frameCheio) return;
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") setFrameCheio(false); }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [frameCheio]);
 
   const camerasUnicas = caminho.reduce((acc, p) => {
     const key = `${p.andar}-${p.camera}`;
@@ -363,40 +362,43 @@ export default function AcompanhamentoPessoaPage() {
         </div>
       )}
 
-      {/* Modal de frame de deteccao */}
+      {/* Modal de frame de deteccao — tamanho da janela controlado por frameScale */}
       <Dialog open={!!frameModal} onOpenChange={() => { setFrameModal(null); setFrameErro(""); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent
+          className="flex flex-col p-0 gap-0 sm:max-w-none"
+          style={{
+            width: `${(FRAME_MAX_VW * frameScale) / 100}vw`,
+            height: `${(FRAME_MAX_VH * frameScale) / 100}vh`,
+            maxWidth: `${FRAME_MAX_VW}vw`,
+            maxHeight: `${FRAME_MAX_VH}vh`,
+            transition: "width 0.15s ease-out, height 0.15s ease-out",
+          }}
+        >
+          <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
             <DialogTitle>Frame da Detecção — {frameModal?.camera}</DialogTitle>
           </DialogHeader>
           {frameModal && (
-            <div className="space-y-3">
+            <div className="flex flex-col flex-1 min-h-0 px-6 pb-6 gap-3">
               {frameErro ? (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription className="text-xs">{frameErro}</AlertDescription>
                 </Alert>
               ) : (
-                <div className="relative group">
-                  <img
+                <div className="flex-1 min-h-0">
+                  <FrameViewer
                     src={frameUrl(frameModal)}
                     alt={`Frame ${frameModal.camera}`}
-                    className="w-full rounded-lg border border-zinc-200 cursor-zoom-in"
-                    onClick={() => setFrameCheio(true)}
                     onError={() => setFrameErro("Não foi possível carregar o frame. O arquivo pode não estar disponível no servidor.")}
+                    scale={frameScale}
+                    baseScale={FRAME_BASE_SCALE}
+                    onScaleChange={setFrameScale}
+                    fullscreen={frameFullscreen}
+                    onFullscreenChange={setFrameFullscreen}
                   />
-                  {/* Botão translúcido de zoom (tela cheia) */}
-                  <button
-                    type="button"
-                    onClick={() => setFrameCheio(true)}
-                    title="Ampliar (tela cheia)"
-                    className="absolute top-2 right-2 flex items-center justify-center h-9 w-9 rounded-full bg-black/40 text-white backdrop-blur-sm hover:bg-black/60 transition-colors"
-                  >
-                    <Maximize2 className="h-4 w-4" />
-                  </button>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
+              <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600 shrink-0">
                 <span><strong>Câmera:</strong> {frameModal.camera}</span>
                 <span><strong>Data/Hora:</strong> {frameModal.data_hora}</span>
                 {frameModal.andar !== 0 && <span><strong>Andar:</strong> {frameModal.andar}</span>}
@@ -406,28 +408,6 @@ export default function AcompanhamentoPessoaPage() {
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Overlay de tela cheia: clicar em qualquer lugar (ou Esc) fecha */}
-      {frameCheio && frameModal && !frameErro && (
-        <div
-          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
-          onClick={() => setFrameCheio(false)}
-        >
-          <img
-            src={frameUrl(frameModal)}
-            alt={`Frame ${frameModal.camera}`}
-            className="max-w-full max-h-full object-contain select-none"
-          />
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setFrameCheio(false); }}
-            title="Fechar (Esc)"
-            className="absolute top-4 right-4 flex items-center justify-center h-11 w-11 rounded-full bg-white/15 text-white backdrop-blur-sm hover:bg-white/30 transition-colors"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-      )}
     </div>
   );
 }

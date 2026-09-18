@@ -7,10 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertCircle, X, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { AlertCircle } from "lucide-react";
+import { FrameViewer } from "@/components/FrameViewer";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 function today() { return new Date().toISOString().slice(0, 10); }
+
+// Controle do tamanho da janela de frame (modal)
+const FRAME_MAX_VW = 95;      // largura quando 100% "maximizado"
+const FRAME_MAX_VH = 92;      // altura quando 100% "maximizado"
+const FRAME_BASE_SCALE = 70;  // janela inicia com 70% do maximizado
 
 interface Deteccao {
   nome: string; horario: string; data_hora?: string; tempo_marcacao: string;
@@ -60,13 +66,10 @@ export default function AcompanhamentoAreaPage() {
   const [error,      setError]      = useState("");
   const [frameModal, setFrameModal] = useState<Deteccao | null>(null);
   const [frameErro,  setFrameErro]  = useState("");
+  // Tamanho/estado da janela de frame
+  const [frameScale, setFrameScale] = useState(FRAME_BASE_SCALE);
+  const [frameFullscreen, setFrameFullscreen] = useState(false);
   const [mapaUrl,    setMapaUrl]    = useState<string | null>(null);
-
-  // Estados de Zoom/Pan para o modal
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     getLocalizacoes().then(locs => {
@@ -113,6 +116,13 @@ export default function AcompanhamentoAreaPage() {
       setPessoas(Object.values(mapa));
     } catch (e: any) { setError(String(e.message ?? e)); }
     finally { setLoading(false); }
+  }
+
+  function abrirFrame(p: Deteccao) {
+    setFrameErro("");
+    setFrameScale(FRAME_BASE_SCALE);
+    setFrameFullscreen(false);
+    setFrameModal(p);
   }
 
   const listaAtiva = selecionada ? selecionada.deteccoes : deteccoes;
@@ -229,7 +239,7 @@ export default function AcompanhamentoAreaPage() {
                           </TableCell>
                           <TableCell className="text-center py-2">
                             {temFrame(d) ? (
-                              <button onClick={() => { setFrameErro(""); setFrameModal(d); }}
+                              <button onClick={() => abrirFrame(d)}
                                 className="text-xs text-blue-500 underline hover:text-blue-700">
                                 Ver
                               </button>
@@ -252,71 +262,44 @@ export default function AcompanhamentoAreaPage() {
         </div>
       )}
 
-      {/* Modal de frame de detecção */}
-      <Dialog open={!!frameModal} onOpenChange={(open) => { 
-        if (!open) { setFrameModal(null); setFrameErro(""); setZoom(1); setPan({x:0, y:0}); }
-      }}>
-        <DialogContent 
-          className="select-none" 
-          style={{ 
-            maxWidth: `min(90vw, ${672 + (zoom - 1) * 300}px)`, 
-            transition: 'max-width 0.15s ease-out' 
+      {/* Modal de frame de detecção — tamanho da janela controlado por frameScale */}
+      <Dialog open={!!frameModal} onOpenChange={() => { setFrameModal(null); setFrameErro(""); }}>
+        <DialogContent
+          className="flex flex-col p-0 gap-0 sm:max-w-none"
+          style={{
+            width: `${(FRAME_MAX_VW * frameScale) / 100}vw`,
+            height: `${(FRAME_MAX_VH * frameScale) / 100}vh`,
+            maxWidth: `${FRAME_MAX_VW}vw`,
+            maxHeight: `${FRAME_MAX_VH}vh`,
+            transition: "width 0.15s ease-out, height 0.15s ease-out",
           }}
         >
-          <DialogHeader>
-            <DialogTitle>Frame de Detecção — {frameModal?.nome}</DialogTitle>
+          <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+            <DialogTitle>Frame da Detecção — {frameModal?.nome}</DialogTitle>
           </DialogHeader>
           {frameModal && (
-            <div className="space-y-3">
+            <div className="flex flex-col flex-1 min-h-0 px-6 pb-6 gap-3">
               {frameErro ? (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription className="text-xs">{frameErro}</AlertDescription>
                 </Alert>
               ) : (
-                <div className="relative group">
-                  <div 
-                    className="w-full rounded-lg border border-zinc-200 bg-black/5 overflow-hidden cursor-move touch-none"
-                    style={{
-                      height: `min(75vh, ${400 + (zoom - 1) * 200}px)`,
-                      transition: isDragging ? 'none' : 'height 0.15s ease-out'
-                    }}
-                    onWheel={(e) => {
-                      e.preventDefault();
-                      setZoom(z => Math.min(Math.max(1, z - e.deltaY * 0.01), 6));
-                    }}
-                    onMouseDown={(e) => {
-                      setIsDragging(true);
-                      setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-                    }}
-                    onMouseMove={(e) => {
-                      if (!isDragging) return;
-                      setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-                    }}
-                    onMouseUp={() => setIsDragging(false)}
-                    onMouseLeave={() => setIsDragging(false)}
-                  >
-                    <img
-                      src={frameUrl(frameModal)}
-                      alt={`Frame de ${frameModal.nome}`}
-                      className="w-full h-full object-contain pointer-events-none"
-                      style={{
-                        transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
-                        transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-                        transformOrigin: 'center center'
-                      }}
-                      draggable={false}
-                      onError={() => setFrameErro("Não foi possível carregar o frame. O arquivo pode não estar disponível no servidor.")}
-                    />
-                  </div>
-                  <div className="absolute bottom-3 right-3 flex items-center bg-white/90 backdrop-blur-sm rounded-lg shadow-md border border-zinc-200 overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => setZoom(z => Math.min(z + 0.5, 6))} className="p-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 transition-colors" title="Aproximar"><ZoomIn size={18}/></button>
-                    <button onClick={() => setZoom(z => Math.max(z - 0.5, 1))} className="p-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 border-l border-zinc-200 transition-colors" title="Afastar"><ZoomOut size={18}/></button>
-                    <button onClick={() => { setZoom(1); setPan({x:0, y:0}); }} className="p-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 border-l border-zinc-200 transition-colors" title="Restaurar zoom"><RotateCcw size={18}/></button>
-                  </div>
+                <div className="flex-1 min-h-0">
+                  <FrameViewer
+                    src={frameUrl(frameModal)}
+                    alt={`Frame ${frameModal.nome}`}
+                    onError={() => setFrameErro("Não foi possível carregar o frame. O arquivo pode não estar disponível no servidor.")}
+                    scale={frameScale}
+                    baseScale={FRAME_BASE_SCALE}
+                    onScaleChange={setFrameScale}
+                    fullscreen={frameFullscreen}
+                    onFullscreenChange={setFrameFullscreen}
+                  />
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600">
+              <div className="grid grid-cols-2 gap-2 text-xs text-zinc-600 shrink-0">
+                <span><strong>Nome:</strong> {frameModal.nome}</span>
                 <span><strong>Horário:</strong> {frameModal.horario}</span>
                 <span><strong>Nota:</strong> {frameModal.nota_comparacao.toFixed(2)}</span>
               </div>

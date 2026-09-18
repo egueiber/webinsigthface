@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Search, Pencil, Trash2, AlertCircle, ChevronUp, ChevronDown, ChevronsUpDown, CalendarPlus, LogOut } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, AlertCircle, ChevronUp, ChevronDown, ChevronsUpDown, CalendarPlus, LogOut, List } from "lucide-react";
 import { toast } from "sonner";
 
 function parsePessoa(p: any) {
@@ -192,6 +192,9 @@ export default function PessoasPage() {
                   <TableCell className="text-zinc-600">{p.documento}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" asChild title="Visualizar eventos">
+                        <Link href={`/pessoa-eventos?pessoa=${p.id}`}><List className="h-4 w-4" /></Link>
+                      </Button>
                       <Button variant="ghost" size="icon" asChild title="Registrar evento">
                         <Link href={`/pessoa-eventos/novo?pessoa=${p.id}`}><CalendarPlus className="h-4 w-4" /></Link>
                       </Button>

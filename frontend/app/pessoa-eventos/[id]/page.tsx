@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { getPessoas, getEventos, getEvento, getPessoaEvento, createPessoaEvento, updatePessoaEvento } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ function toLocal(value: string | Date | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export default function PessoaEventoFormPage() {
+function PessoaEventoForm() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -179,7 +179,7 @@ export default function PessoaEventoFormPage() {
       if (isNew) await createPessoaEvento(payload);
       else await updatePessoaEvento(Number(id), payload);
       toast.success("Registro salvo com sucesso!");
-      router.push("/pessoa-eventos");
+      router.push(pessoaPre ? "/pessoas" : "/pessoa-eventos");
     } catch (e: any) { setError(String(e.message ?? e)); }
     finally { setLoading(false); }
   }
@@ -190,7 +190,7 @@ export default function PessoaEventoFormPage() {
     <div className="space-y-6 max-w-lg">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/pessoa-eventos"><ArrowLeft className="h-4 w-4" /></Link>
+          <Link href={pessoaPre ? "/pessoas" : "/pessoa-eventos"}><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
         <h1 className="text-2xl font-bold text-zinc-800">{isNew ? "Novo Registro" : "Editar Registro"}</h1>
       </div>
@@ -278,5 +278,13 @@ export default function PessoaEventoFormPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function PessoaEventoFormPage() {
+  return (
+    <Suspense fallback={<div>Carregando...</div>}>
+      <PessoaEventoForm />
+    </Suspense>
   );
 }
