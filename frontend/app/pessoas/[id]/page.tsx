@@ -165,7 +165,11 @@ export default function PessoaFormPage() {
           </div>
           <div className="space-y-1.5">
             <Label>Documento <span className="text-red-500">*</span></Label>
-            <Input value={documento} onChange={e => setDocumento(e.target.value)} placeholder="CPF, RG ou matrícula" />
+            <Input value={documento} onChange={e => {
+                const val = e.target.value;
+				const filtered = val.replace(/[.\-,\/\\:*?"<>|\s]/g, '');
+                setDocumento(filtered);
+            }} placeholder="CPF, RG ou matrícula" />
           </div>
           <div className="flex gap-2">
             <Button onClick={salvar} disabled={loading}>

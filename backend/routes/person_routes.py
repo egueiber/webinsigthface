@@ -28,6 +28,9 @@ def _normalizar_nome(nome: str) -> str:
     nome = re.sub(r'_+', '_', nome).strip('_')
     return nome
 
+def generate_fotos_pessoa(name: str, document: str) -> str:
+    return f"{name.replace(' ', '_')}_{document.replace(' ', '_')}"
+
 
 @router.get("/")
 def get_all_persons(filter: str = ""):
@@ -45,8 +48,11 @@ def get_person(person_id: int):
 @router.post("/")
 def create_person(name: str, document: str, photos_folder: str = "", biodoc_card: str = ""):
     try:
-        if not photos_folder:
-            photos_folder = _normalizar_nome(name)
+        if re.search(r'[.\-,/\\:*?"<>| ]', document):
+            raise HTTPException(status_code=400, detail="Documento contém caracteres inválidos.")
+            
+        photos_folder = generate_fotos_pessoa(name, document)
+        
         new_id = save_person(name, document, photos_folder, biodoc_card=biodoc_card or None)
         pasta = os.path.join(FOTOS_DIR, photos_folder)
         os.makedirs(pasta, exist_ok=True)
@@ -58,11 +64,23 @@ def create_person(name: str, document: str, photos_folder: str = "", biodoc_card
 @router.put("/{person_id}")
 def update_person(person_id: int, name: str, document: str, photos_folder: str = "", biodoc_card: str = ""):
     try:
+        if re.search(r'[.\-,/\\:*?"<>|] ', document):
+            raise HTTPException(status_code=400, detail="Documento contém caracteres inválidos.")
+            
         person = get_person_by_id(person_id)
         if not person:
             raise HTTPException(status_code=404, detail="Person not found")
-        if not photos_folder:
-            photos_folder = person.get("photos_folder") or _normalizar_nome(name)
+            
+        new_photos_folder = generate_fotos_pessoa(name, document)
+        old_photos_folder = person.get("photos_folder")
+        
+        if old_photos_folder and old_photos_folder != new_photos_folder:
+            old_dir = os.path.join(FOTOS_DIR, old_photos_folder)
+            new_dir = os.path.join(FOTOS_DIR, new_photos_folder)
+            if os.path.exists(old_dir) and not os.path.exists(new_dir):
+                os.rename(old_dir, new_dir)
+                
+        photos_folder = new_photos_folder
         card = biodoc_card if biodoc_card != "" else person.get("biodoc_card")
         save_person(name, document, photos_folder, person_id, biodoc_card=card or None)
         pasta = os.path.join(FOTOS_DIR, photos_folder)

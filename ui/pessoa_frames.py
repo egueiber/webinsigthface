@@ -182,7 +182,14 @@ class CadastroFacialFrame(ttk.Frame):
         self.nome_entry.grid(row=0, column=1, padx=5)
 
         ttk.Label(form_frame, text="Nº da Carteira de ID:").grid(row=1, column=0, padx=5, sticky='w')
-        self.id_entry = ttk.Entry(form_frame, width=30)
+        
+        def validate_doc(P):
+            if re.search(r'[.\-,/\\:*?"<>|]', P):
+                return False
+            return True
+            
+        vcmd = (self.register(validate_doc), '%P')
+        self.id_entry = ttk.Entry(form_frame, width=30, validate='key', validatecommand=vcmd)
         self.id_entry.grid(row=1, column=1, padx=5)
 
         self.btn_acao = ttk.Button(self, text="Iniciar Cadastro", style="Accent.TButton", command=self.iniciar_cadastro)
@@ -282,8 +289,8 @@ class CadastroFacialFrame(ttk.Frame):
         if not base_path_fotos or not os.path.isdir(base_path_fotos):
              messagebox.showerror("Erro de Parâmetro", f"O caminho de fotos não está configurado ou é inválido:\n{base_path_fotos}\n\nVá ao menu 'Parâmetros' para corrigir.")
              return
-        nome_sanitizado = self.sanitizar_nome(nome)
-        id_sanitizado = self.sanitizar_nome(id_carteira)
+        nome_sanitizado = nome.replace(" ", "_")
+        id_sanitizado = id_carteira.replace(" ", "_")
         self.nome_pasta = f"{nome_sanitizado}_{id_sanitizado}"
         self.caminho_pasta = os.path.join(base_path_fotos, self.nome_pasta)
         if os.path.exists(self.caminho_pasta):
