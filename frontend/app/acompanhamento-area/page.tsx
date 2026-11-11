@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getLocalizacoes, getAreaTracking, getToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -98,11 +98,15 @@ export default function AcompanhamentoAreaPage() {
       .catch(() => setMapaUrl(null));
   }, [locId]);
 
-  async function buscar() {
-    if (!locId) { setError("Selecione uma localização."); return; }
+  const buscaAtual = useRef(0);
+
+  async function buscar(id: string = locId) {
+    if (!id) { setError("Selecione uma localização."); return; }
+    const reqId = ++buscaAtual.current;
     setLoading(true); setError(""); setDeteccoes([]); setPessoas([]); setSelecionada(null); setTooltip(null);
     try {
-      const dados = await getAreaTracking(Number(locId), data);
+      const dados = await getAreaTracking(Number(id), data);
+      if (reqId !== buscaAtual.current) return; // resposta de uma busca anterior
       setDeteccoes(dados);
       if (dados.length === 0) { setError("Nenhuma detecção encontrada para essa localização e data."); return; }
       const mapa: Record<string, PessoaAgrupada> = {};
@@ -114,8 +118,8 @@ export default function AcompanhamentoAreaPage() {
         if (d.nota_comparacao > mapa[d.nome].melhorNota) mapa[d.nome].melhorNota = d.nota_comparacao;
       }
       setPessoas(Object.values(mapa));
-    } catch (e: any) { setError(String(e.message ?? e)); }
-    finally { setLoading(false); }
+    } catch (e: any) { if (reqId === buscaAtual.current) setError(String(e.message ?? e)); }
+    finally { if (reqId === buscaAtual.current) setLoading(false); }
   }
 
   function abrirFrame(p: Deteccao) {
@@ -135,7 +139,7 @@ export default function AcompanhamentoAreaPage() {
         <div className="flex flex-wrap gap-4 items-end">
           <div className="space-y-1.5 min-w-48">
             <p className="text-sm font-medium text-zinc-700">Localização</p>
-            <Select value={locId} onValueChange={v => { setLocId(v); const l = localizacoes.find(x => String(x.id)===v); if(l) setLocNome(l.nome); }}>
+            <Select value={locId} onValueChange={v => { setLocId(v); const l = localizacoes.find(x => String(x.id)===v); if(l) setLocNome(l.nome); buscar(v); }}>
               <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>{localizacoes.map(l => <SelectItem key={l.id} value={String(l.id)}>{l.nome}</SelectItem>)}</SelectContent>
             </Select>
@@ -145,7 +149,7 @@ export default function AcompanhamentoAreaPage() {
             <input type="date" value={data} onChange={e => setData(e.target.value)}
               className="flex h-9 rounded-md border border-zinc-200 bg-white px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-900" />
           </div>
-          <Button onClick={buscar} disabled={loading}>{loading ? "Buscando..." : "Buscar"}</Button>
+          <Button onClick={() => buscar()} disabled={loading}>{loading ? "Buscando..." : "Buscar"}</Button>
         </div>
       </CardContent></Card>
 

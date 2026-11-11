@@ -16,7 +16,8 @@ from backend.services.auth_service import (
 )
 from backend.services.auth_dependency import apenas_admin
 
-router = APIRouter(prefix="/users", tags=["Usuarios"])
+# Todas as rotas de usuarios exigem admin, inclusive as que forem criadas depois.
+router = APIRouter(prefix="/users", tags=["Usuarios"], dependencies=[Depends(apenas_admin)])
 
 
 class NovoUsuarioData(BaseModel):

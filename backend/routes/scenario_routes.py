@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import Depends, APIRouter, HTTPException
+from backend.services.auth_dependency import apenas_admin
 from backend.services.scenario_service import (
     list_scenarios,
     get_scenario_by_id,
@@ -14,22 +15,22 @@ from backend.services.scenario_service import (
 router = APIRouter(prefix="/scenarios", tags=["Scenarios"])
 
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(apenas_admin)])
 def get_all_scenarios(filter: str = ""):
     return list_scenarios(filter)
 
 
-@router.get("/cameras/available")
+@router.get("/cameras/available", dependencies=[Depends(apenas_admin)])
 def get_available_cameras():
     return list_available_cameras()
 
 
-@router.get("/parameters/available")
+@router.get("/parameters/available", dependencies=[Depends(apenas_admin)])
 def get_available_parameters():
     return list_available_parameters()
 
 
-@router.get("/{scenario_id}")
+@router.get("/{scenario_id}", dependencies=[Depends(apenas_admin)])
 def get_scenario(scenario_id: int):
     scenario = get_scenario_by_id(scenario_id)
     if not scenario:
@@ -37,12 +38,12 @@ def get_scenario(scenario_id: int):
     return scenario
 
 
-@router.get("/{scenario_id}/cameras")
+@router.get("/{scenario_id}/cameras", dependencies=[Depends(apenas_admin)])
 def get_scenario_cameras(scenario_id: int):
     return get_cameras_for_scenario(scenario_id)
 
 
-@router.post("/")
+@router.post("/", dependencies=[Depends(apenas_admin)])
 def create_scenario(
     description: str, parameter_id: int, active: bool = True, default: bool = False
 ):
@@ -53,7 +54,7 @@ def create_scenario(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.put("/{scenario_id}")
+@router.put("/{scenario_id}", dependencies=[Depends(apenas_admin)])
 def update_scenario(
     scenario_id: int,
     description: str,
@@ -68,7 +69,7 @@ def update_scenario(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.delete("/{scenario_id}")
+@router.delete("/{scenario_id}", dependencies=[Depends(apenas_admin)])
 def remove_scenario(scenario_id: int):
     try:
         delete_scenario(scenario_id)
@@ -77,7 +78,7 @@ def remove_scenario(scenario_id: int):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/{scenario_id}/cameras/{camera_id}")
+@router.post("/{scenario_id}/cameras/{camera_id}", dependencies=[Depends(apenas_admin)])
 def add_camera(scenario_id: int, camera_id: int):
     try:
         add_camera_to_scenario(scenario_id, camera_id)
@@ -86,7 +87,7 @@ def add_camera(scenario_id: int, camera_id: int):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.delete("/{scenario_id}/cameras/{scenario_camera_id}")
+@router.delete("/{scenario_id}/cameras/{scenario_camera_id}", dependencies=[Depends(apenas_admin)])
 def remove_camera(scenario_id: int, scenario_camera_id: int):
     try:
         remove_camera_from_scenario(scenario_camera_id)

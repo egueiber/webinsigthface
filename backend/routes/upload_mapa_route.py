@@ -1,6 +1,7 @@
 import os
 import shutil
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import Depends, APIRouter, HTTPException, UploadFile, File
+from backend.services.auth_dependency import apenas_admin
 from fastapi.responses import FileResponse
 from backend.services.database_service import get_db_connection
 
@@ -10,7 +11,7 @@ MAPAS_DIR = os.getenv("MAPAS_DIR", "/app/data/mapas")
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
 
-@router.post("/{location_id}/mapa")
+@router.post("/{location_id}/mapa", dependencies=[Depends(apenas_admin)])
 async def upload_mapa(location_id: int, file: UploadFile = File(...)):
     """Upload de imagem de mapa para uma localização."""
     ext = os.path.splitext(file.filename or "mapa.jpg")[1].lower()

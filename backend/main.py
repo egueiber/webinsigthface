@@ -36,8 +36,8 @@ app.add_middleware(
 app.include_router(auth_router)
 
 # ── Rotas protegidas (exigem token valido) ────────────────────────────────────
-# user_router tem sua propria protecao (apenas_admin) em cada rota,
-# entao nao precisa do dependencies generico aqui.
+# user_router e config_router aplicam apenas_admin no proprio APIRouter,
+# entao user_router nao precisa do dependencies generico aqui.
 protegido = [Depends(usuario_logado)]
 
 app.include_router(user_router)

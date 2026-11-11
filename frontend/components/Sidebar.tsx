@@ -12,11 +12,6 @@ import { toast } from "sonner";
 
 const navItems = [
   { label: "Dashboard",          href: "/dashboard",               icon: LayoutDashboard },
-  { label: "Pessoas",            href: "/pessoas",                 icon: Users },
-  { label: "Câmeras",            href: "/cameras",                 icon: Camera },
-  { label: "Localizações",       href: "/localizacoes",            icon: MapPin },
-  { label: "Eventos",            href: "/eventos",                 icon: CalendarDays },
-  { label: "Cenários",           href: "/cenarios",                icon: Film },
   { label: "Acomp. Área",        href: "/acompanhamento-area",     icon: Map },
   { label: "Acomp. Pessoa",      href: "/acompanhamento-pessoa",   icon: UserSearch },
 ];
@@ -38,8 +33,18 @@ export default function Sidebar() {
 
   const isAdmin = usuario?.papel === "admin";
 
+  const adminItems = [
+    { label: "Pessoas",            href: "/pessoas",                 icon: Users },
+    { label: "Câmeras",            href: "/cameras",                 icon: Camera },
+    { label: "Localizações",       href: "/localizacoes",            icon: MapPin },
+    { label: "Eventos",            href: "/eventos",                 icon: CalendarDays },
+    { label: "Cenários",           href: "/cenarios",                icon: Film },
+    { label: "Parâmetros",         href: "/parametros",              icon: Settings },
+    { label: "Usuários",           href: "/usuarios",                icon: ShieldCheck }
+  ];
+
   const itensCompletos = isAdmin
-    ? [...navItems, { label: "Parâmetros", href: "/parametros", icon: Settings }, { label: "Usuários", href: "/usuarios", icon: ShieldCheck }]
+    ? [...navItems, ...adminItems]
     : navItems;
 
   return (

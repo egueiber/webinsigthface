@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import Depends, APIRouter, HTTPException
+from backend.services.auth_dependency import apenas_admin
 from backend.services.database_service import (
     list_person_events,
     get_person_event_by_id,
@@ -10,12 +11,12 @@ from datetime import datetime
 router = APIRouter(prefix="/person-events", tags=["Person Events"])
 
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(apenas_admin)])
 def get_all_person_events(person_id: int = None):
     return list_person_events(person_id)
 
 
-@router.get("/{person_event_id}")
+@router.get("/{person_event_id}", dependencies=[Depends(apenas_admin)])
 def get_person_event(person_event_id: int):
     pe = get_person_event_by_id(person_event_id)
     if not pe:
@@ -23,7 +24,7 @@ def get_person_event(person_event_id: int):
     return pe
 
 
-@router.post("/")
+@router.post("/", dependencies=[Depends(apenas_admin)])
 def create_person_event(
     person_id: int, event_id: int, entry_datetime: str,
     expected_exit_datetime: str = None, actual_exit_datetime: str = None,
@@ -39,7 +40,7 @@ def create_person_event(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.put("/{person_event_id}")
+@router.put("/{person_event_id}", dependencies=[Depends(apenas_admin)])
 def update_person_event(
     person_event_id: int, person_id: int, event_id: int, entry_datetime: str,
     expected_exit_datetime: str = None, actual_exit_datetime: str = None,
@@ -55,7 +56,7 @@ def update_person_event(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.delete("/{person_event_id}")
+@router.delete("/{person_event_id}", dependencies=[Depends(apenas_admin)])
 def remove_person_event(person_event_id: int):
     try:
         delete_person_event(person_event_id)

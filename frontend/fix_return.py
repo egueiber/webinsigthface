@@ -1,0 +1,26 @@
+import os
+
+FILES = [
+    "app/cameras/[id]/page.tsx",
+    "app/cenarios/[id]/page.tsx",
+    "app/eventos/[id]/page.tsx",
+    "app/localizacoes/[id]/page.tsx",
+    "app/pessoas/[id]/page.tsx",
+    "app/pessoa-eventos/[id]/page.tsx",
+    "app/pessoa-eventos/page.tsx",
+]
+
+for file_path in FILES:
+    if not os.path.exists(file_path):
+        continue
+    with open(file_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # The issue: `returreturn (` or `returreturn` might exist
+    content = content.replace("returreturn (", "return (")
+    content = content.replace("returnreturn", "return")
+    
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(content)
+        
+    print(f"Fixed {file_path}")

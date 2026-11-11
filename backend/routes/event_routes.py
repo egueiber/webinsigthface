@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import Depends, APIRouter, HTTPException
+from backend.services.auth_dependency import apenas_admin
 from backend.services.event_service import (
     list_events,
     get_event_by_id,
@@ -9,12 +10,12 @@ from backend.services.event_service import (
 router = APIRouter(prefix="/events", tags=["Events"])
 
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(apenas_admin)])
 def get_all_events(filter: str = ""):
     return list_events(filter)
 
 
-@router.get("/{event_id}")
+@router.get("/{event_id}", dependencies=[Depends(apenas_admin)])
 def get_event(event_id: int):
     event = get_event_by_id(event_id)
     if not event:
@@ -22,7 +23,7 @@ def get_event(event_id: int):
     return event
 
 
-@router.post("/")
+@router.post("/", dependencies=[Depends(apenas_admin)])
 def create_event(name: str, duration: int):
     try:
         save_event(name, duration)
@@ -31,7 +32,7 @@ def create_event(name: str, duration: int):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.put("/{event_id}")
+@router.put("/{event_id}", dependencies=[Depends(apenas_admin)])
 def update_event(event_id: int, name: str, duration: int):
     try:
         save_event(name, duration, event_id)
@@ -40,7 +41,7 @@ def update_event(event_id: int, name: str, duration: int):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.delete("/{event_id}")
+@router.delete("/{event_id}", dependencies=[Depends(apenas_admin)])
 def remove_event(event_id: int):
     try:
         delete_event(event_id)

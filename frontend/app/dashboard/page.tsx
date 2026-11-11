@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getDashboardIndicators, getDelayedPersons, getLocalizacoes, updatePessoaEvento } from "@/lib/api";
+import { getDashboardIndicators, getDelayedPersons, getLocalizacoes, updatePessoaEvento, getUsuarioLocal } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,12 +44,17 @@ export default function DashboardPage() {
   const [atrasados,     setAtrasados]     = useState<any[]>([]);
   const [loading,       setLoading]       = useState(false);
   const [error,         setError]         = useState("");
+  const [souAdmin,      setSouAdmin]      = useState(false);
 
   // Modal de encerramento (mesma lógica da tela de Pessoas)
   const [encerrando,  setEncerrando]  = useState<any>(null);
   const [modoSaida,   setModoSaida]   = useState<"agora" | "manual">("agora");
   const [saidaManual, setSaidaManual] = useState("");
   const [salvandoEnc, setSalvandoEnc] = useState(false);
+
+  useEffect(() => {
+    setSouAdmin(getUsuarioLocal()?.papel === "admin");
+  }, []);
 
   useEffect(() => {
     getLocalizacoes()
@@ -183,14 +188,14 @@ export default function DashboardPage() {
                 <TableHead>Nome</TableHead>
                 <TableHead className="text-center">Tempo de Atraso</TableHead>
                 <TableHead className="text-center">Última Localização</TableHead>
-                <TableHead className="text-center w-24">Ações</TableHead>
+                {souAdmin && <TableHead className="text-center w-24">Ações</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-10 text-zinc-400">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={souAdmin ? 4 : 3} className="text-center py-10 text-zinc-400">Carregando...</TableCell></TableRow>
               ) : atrasados.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-10 text-zinc-400">Nenhuma pessoa com atraso no período.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={souAdmin ? 4 : 3} className="text-center py-10 text-zinc-400">Nenhuma pessoa com atraso no período.</TableCell></TableRow>
               ) : atrasados.map((p: any, i: number) => {
                 const nome = p.name ?? p.nome;
                 return (
@@ -207,16 +212,18 @@ export default function DashboardPage() {
                     </TableCell>
                     <TableCell className="text-center text-orange-600 font-mono">{p.delay_time ?? p.tempo_atraso}</TableCell>
                     <TableCell className="text-center">{p.last_location ?? p.localizacao}</TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        variant="ghost" size="icon"
-                        disabled={!p.evento_id}
-                        onClick={() => abrirEncerrar(p)}
-                        title={p.evento_id ? "Encerrar entrada" : "Sem evento em andamento"}
-                      >
-                        <LogOut className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+                    {souAdmin && (
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost" size="icon"
+                          disabled={!p.evento_id}
+                          onClick={() => abrirEncerrar(p)}
+                          title={p.evento_id ? "Encerrar entrada" : "Sem evento em andamento"}
+                        >
+                          <LogOut className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })}

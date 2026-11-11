@@ -2,7 +2,8 @@ import os
 import shutil
 import re
 import time
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import Depends, APIRouter, HTTPException, UploadFile, File
+from backend.services.auth_dependency import apenas_admin
 from backend.services.database_service import (
     list_persons,
     get_person_by_id,
@@ -37,7 +38,7 @@ def get_all_persons(filter: str = ""):
     return list_persons(filter)
 
 
-@router.get("/{person_id}")
+@router.get("/{person_id}", dependencies=[Depends(apenas_admin)])
 def get_person(person_id: int):
     person = get_person_by_id(person_id)
     if not person:
@@ -45,7 +46,7 @@ def get_person(person_id: int):
     return person
 
 
-@router.post("/")
+@router.post("/", dependencies=[Depends(apenas_admin)])
 def create_person(name: str, document: str, photos_folder: str = "", biodoc_card: str = ""):
     try:
         if re.search(r'[.\-,/\\:*?"<>| ]', document):
@@ -61,7 +62,7 @@ def create_person(name: str, document: str, photos_folder: str = "", biodoc_card
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.put("/{person_id}")
+@router.put("/{person_id}", dependencies=[Depends(apenas_admin)])
 def update_person(person_id: int, name: str, document: str, photos_folder: str = "", biodoc_card: str = ""):
     try:
         if re.search(r'[.\-,/\\:*?"<>|] ', document):
@@ -92,7 +93,7 @@ def update_person(person_id: int, name: str, document: str, photos_folder: str =
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/{person_id}/photos")
+@router.post("/{person_id}/photos", dependencies=[Depends(apenas_admin)])
 async def upload_photo(person_id: int, file: UploadFile = File(...)):
     """Faz upload de uma foto para a pasta da pessoa."""
     person = get_person_by_id(person_id)
@@ -122,7 +123,7 @@ async def upload_photo(person_id: int, file: UploadFile = File(...)):
     return {"message": "Foto enviada com sucesso", "path": destino, "filename": nome_arquivo}
 
 
-@router.get("/{person_id}/photos")
+@router.get("/{person_id}/photos", dependencies=[Depends(apenas_admin)])
 def list_photos(person_id: int):
     """Lista as fotos cadastradas de uma pessoa."""
     person = get_person_by_id(person_id)
@@ -144,7 +145,7 @@ def list_photos(person_id: int):
     return {"photos": fotos, "folder": photos_folder, "folder_path": pasta}
 
 
-@router.delete("/{person_id}/photos/{filename}")
+@router.delete("/{person_id}/photos/{filename}", dependencies=[Depends(apenas_admin)])
 def delete_photo(person_id: int, filename: str):
     """Remove uma foto específica da pessoa."""
     person = get_person_by_id(person_id)
@@ -165,7 +166,7 @@ def delete_photo(person_id: int, filename: str):
     return {"message": "Foto removida com sucesso"}
 
 
-@router.delete("/{person_id}")
+@router.delete("/{person_id}", dependencies=[Depends(apenas_admin)])
 def remove_person(person_id: int):
     try:
         delete_person(person_id)

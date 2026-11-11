@@ -11,7 +11,8 @@ from backend.services.config_service import (
     load_parameters
 )
 
-router = APIRouter(prefix="/config", tags=["Config"])
+# Todas as rotas de configuracao exigem admin, inclusive as que forem criadas depois.
+router = APIRouter(prefix="/config", tags=["Config"], dependencies=[Depends(apenas_admin)])
 
 
 class ParameterData(BaseModel):
@@ -41,10 +42,8 @@ def initialize(admin=Depends(apenas_admin)):
 
 
 @router.get("/parameters")
-def get_all_parameters(filter: str = ""):
-    # Aberto a qualquer usuário logado (não só admin): a tela de Cenários
-    # precisa listar os parâmetros pelo nome para o dropdown. Só devolve
-    # id + nome, sem nenhum dado sensível (token/URL da Biodoc, caminhos etc).
+def get_all_parameters(filter: str = "", admin=Depends(apenas_admin)):
+    # Usado pelas telas de Parâmetros e Cenários, ambas restritas a admin.
     return list_parameters(filter)
 
 

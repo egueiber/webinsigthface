@@ -1,7 +1,11 @@
 import os
 import time
 import re
-from fastapi import APIRouter, HTTPException
+"""from fastapi import APIRouter, HTTPException
+from backend.services.auth_dependency import apenas_admin, Depends
+"""
+from fastapi import APIRouter, Depends, HTTPException
+from backend.services.auth_dependency import apenas_admin
 from backend.services.biodoc_service import (
     buscar_imagem_principal,
     salvar_imagem_base64,
@@ -24,7 +28,7 @@ def _normalizar_nome(nome: str) -> str:
     return re.sub(r"_+", "_", nome).strip("_")
 
 
-@router.get("/consultar/{id_card}")
+@router.get("/consultar/{id_card}", dependencies=[Depends(apenas_admin)])
 def consultar_carteirinha(id_card: str):
     """
     Consulta uma carteirinha na Biodoc e retorna os dados (sem salvar).
@@ -51,7 +55,7 @@ def consultar_carteirinha(id_card: str):
         raise HTTPException(status_code=502, detail=f"Erro ao consultar Biodoc: {e}")
 
 
-@router.post("/vincular/{person_id}")
+@router.post("/vincular/{person_id}", dependencies=[Depends(apenas_admin)])
 def vincular_foto_biodoc(person_id: int, id_card: str):
     """
     Busca a foto do beneficiário na Biodoc pela carteirinha e salva na

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import Depends, APIRouter, HTTPException
+from backend.services.auth_dependency import apenas_admin
 from backend.services.location_service import (
     list_locations,
     get_location_by_id,
@@ -14,7 +15,7 @@ def get_all_locations(filter: str = ""):
     return list_locations(filter)
 
 
-@router.get("/{location_id}")
+@router.get("/{location_id}", dependencies=[Depends(apenas_admin)])
 def get_location(location_id: int):
     location = get_location_by_id(location_id)
     if not location:
@@ -22,7 +23,7 @@ def get_location(location_id: int):
     return location
 
 
-@router.post("/")
+@router.post("/", dependencies=[Depends(apenas_admin)])
 def create_location(name: str, map_path: str = ""):
     try:
         new_id = save_location(name, map_path)
@@ -31,7 +32,7 @@ def create_location(name: str, map_path: str = ""):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.put("/{location_id}")
+@router.put("/{location_id}", dependencies=[Depends(apenas_admin)])
 def update_location(location_id: int, name: str, map_path: str = ""):
     try:
         save_location(name, map_path, location_id)
@@ -40,7 +41,7 @@ def update_location(location_id: int, name: str, map_path: str = ""):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.delete("/{location_id}")
+@router.delete("/{location_id}", dependencies=[Depends(apenas_admin)])
 def remove_location(location_id: int, map_path: str = None):
     try:
         delete_location(location_id, map_path)

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import Depends, APIRouter, HTTPException
+from backend.services.auth_dependency import apenas_admin
 from backend.services.database_service import (
     list_cameras,
     get_camera_by_id,
@@ -9,12 +10,12 @@ from backend.services.database_service import (
 router = APIRouter(prefix="/cameras", tags=["Cameras"])
 
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(apenas_admin)])
 def get_all_cameras(filter: str = ""):
     return list_cameras(filter)
 
 
-@router.get("/{camera_id}")
+@router.get("/{camera_id}", dependencies=[Depends(apenas_admin)])
 def get_camera(camera_id: int):
     camera = get_camera_by_id(camera_id)
     if not camera:
@@ -22,7 +23,7 @@ def get_camera(camera_id: int):
     return camera
 
 
-@router.post("/")
+@router.post("/", dependencies=[Depends(apenas_admin)])
 def create_camera(
     name: str, location_id: int,
     floor: int = 0, room_number: int = 0,
@@ -36,7 +37,7 @@ def create_camera(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.put("/{camera_id}")
+@router.put("/{camera_id}", dependencies=[Depends(apenas_admin)])
 def update_camera(
     camera_id: int, name: str, location_id: int,
     floor: int = 0, room_number: int = 0,
@@ -50,7 +51,7 @@ def update_camera(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.delete("/{camera_id}")
+@router.delete("/{camera_id}", dependencies=[Depends(apenas_admin)])
 def remove_camera(camera_id: int):
     try:
         delete_camera(camera_id)
